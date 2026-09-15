@@ -1,0 +1,41 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+}
+
+.panel {
+  width: min(100%, 720px);
+  padding: clamp(28px, 6vw, 64px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
+}
+
+.panel h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-size: clamp(2.25rem, 7vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+}
+
+.eyebrow {
+  margin: 0 0 24px;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.description {
+  max-width: 55ch;
+  margin: 32px 0 0;
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
