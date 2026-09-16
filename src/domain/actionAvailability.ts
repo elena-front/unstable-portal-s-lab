@@ -33,6 +33,7 @@ export function actionAvailability(
   return {
     send: unavailable ?? notActive ??
       (portal.riskStatus === 'critical' ? 'Отправка в критичный портал запрещена.' : null) ??
+      (world?.researchStatus === 'explored' ? 'Мир уже исследован. Новая экспедиция не нужна.' : null) ??
       (groupSize < 1 || groupSize > config.maxExpeditionSize ? `Выберите от 1 до ${config.maxExpeditionSize} сотрудников.` : null) ??
       (free < groupSize ? 'В лаборатории недостаточно сотрудников.' : null) ??
       (after === 0 && !reserve ? 'Переход исчерпает портал; надёжного маршрута возвращения нет.' : null),
@@ -51,7 +52,8 @@ export function actionAvailability(
       (energyAfterTransit(portal, 1, config) === 0 ? 'Переход наблюдателя исчерпает портал.' : null),
     close: unavailable ??
       (portal.lifecycle === 'closed' ? 'Портал уже закрыт.' : null) ??
-      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' ? 'Можно закрыть только портал в исследованный мир.' : null) ??
+      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && portal.riskStatus !== 'critical' ? 'Неисследованный мир: закрытие доступно только критичному порталу.' : null) ??
+      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия критичного портала нужен другой надёжный маршрут в этот мир.' : null) ??
       (portal.lifecycle === 'active' && inWorld > 0 && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Закрытие оставит сотрудников без надёжного маршрута.' : null),
   };
 }

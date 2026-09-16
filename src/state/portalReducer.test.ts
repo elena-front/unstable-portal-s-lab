@@ -24,7 +24,7 @@ describe('Portal reducer', () => {
       portalId: 'portal-1',
       employeeIds: ['missing'],
     });
-    expect(rejected.selectedPortalId).toBe('portal-1');
+    expect(rejected.selectedPortalId).toBeNull();
     expect(rejected.portalFilter).toBe('critical');
     expect(rejected.notification?.kind).toBe('error');
     expect(rejected.events.at(-1)?.outcome).toBe('rejected');

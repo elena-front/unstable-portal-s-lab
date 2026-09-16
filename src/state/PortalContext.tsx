@@ -90,7 +90,7 @@ export function PortalProvider({
       stop();
       if (document.hidden) return;
       timer = setInterval(() => {
-        if (!document.hidden) {
+        if (!document.hidden && !state.awaitingStart) {
           dispatch({ type: 'tick', deltaSeconds: config.energyTickSeconds });
         }
       }, config.energyTickSeconds * 1000);
@@ -101,7 +101,7 @@ export function PortalProvider({
       stop();
       document.removeEventListener('visibilitychange', updateVisibility);
     };
-  }, [config.energyTickSeconds]);
+  }, [config.energyTickSeconds, state.awaitingStart]);
 
   const value = useMemo(() => ({ state, dispatch }), [state, dispatch]);
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;

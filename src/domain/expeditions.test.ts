@@ -30,6 +30,15 @@ describe('экспедиции и исследование', () => {
     expect(result.value.worlds[0]?.researchStatus).toBe('exploring');
   });
 
+  it('не отправляет сотрудников в уже исследованный мир', () => {
+    const state = domainState({ worlds: [world({ researchStatus: 'explored', researchProgress: 100 })] });
+    const result = sendResearchers(state, 'portal-1', ['employee-1'], dependencies, config);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('уже исследован');
+    expect(result.value.employees[0]?.location).toBe('lab');
+    expect(result.value.portals[0]?.energy).toBe(state.portals[0]?.energy);
+  });
+
   it('блокирует исчерпывающую отправку без надёжного резерва', () => {
     const result = sendResearchers(
       domainState({ portals: [portal({ energy: 5 })] }),

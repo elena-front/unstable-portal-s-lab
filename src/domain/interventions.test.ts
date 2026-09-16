@@ -185,4 +185,18 @@ describe('закрытие порталов', () => {
     expect(result.ok).toBe(true);
     expect(result.value.portals[0]?.lifecycle).toBe('closed');
   });
+
+  it('закрывает критичный маршрут в неисследованный мир только при надёжном резерве', () => {
+    const critical = portal({ riskStatus: 'critical', wasCritical: true, energy: 10 });
+    const reserve = portal({ id: 'reserve', dissipationCoefficient: 0, stability: 1,
+      initialLifetimeSeconds: null });
+    const state = domainState({ portals: [critical, reserve],
+      employees: [employee('field', { location: { worldId: 'world-1' } })] });
+    expect(closePortal(state, critical.id, false, dependencies, config).ok).toBe(false);
+    const closed = closePortal(state, critical.id, true, dependencies, config);
+    expect(closed.ok).toBe(true);
+    expect(closed.value.portals[0]?.lifecycle).toBe('closed');
+    const noReserve = closePortal({ ...state, portals: [critical] }, critical.id, true, dependencies, config);
+    expect(noReserve.ok).toBe(false);
+  });
 });

@@ -1,0 +1,13 @@
+.worklog { max-width: 920px; margin: 30px auto 0; padding: clamp(20px, 4vw, 36px); border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); line-height: 1.6; }
+.worklog h2, .worklog h3, .worklog h4 { line-height: 1.25; }
+.worklog h2 { margin: 0 0 12px; }
+.worklog h3 { margin: 0 0 12px; }
+.worklog h4 { margin: 0 0 8px; }
+.worklog p { margin: 0 0 12px; }
+.worklog section { padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--color-border); }
+.worklog li + li { margin-top: 10px; }
+.worklog ul, .worklog ol { padding-left: 22px; margin: 0; }
+.worklog code { overflow-wrap: anywhere; }
+.eyebrow { margin-bottom: 8px !important; color: var(--color-text-muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 640px) { .columns { grid-template-columns: 1fr; gap: 12px; } }

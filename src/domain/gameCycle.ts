@@ -20,6 +20,16 @@ function collapsedPortalCount(portals: readonly Portal[]): number {
   ).length;
 }
 
+export function missionSummary(result: GameResult): { completed: boolean; score: number } {
+  const totalEmployees = result.returnedEmployees + result.lostEmployees;
+  return {
+    completed: result.totalWorlds > 0 && result.exploredWorlds === result.totalWorlds,
+    score: totalEmployees > 0
+      ? Math.round(100 * result.returnedEmployees / totalEmployees)
+      : 0,
+  };
+}
+
 export function createGameResult(
   state: DomainState,
   dependencies: DomainDependencies,

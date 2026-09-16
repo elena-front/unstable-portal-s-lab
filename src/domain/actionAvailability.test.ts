@@ -48,6 +48,18 @@ describe('проверочные сценарии и причины действ
     expect(reason.observe).toContain('критичный');
   });
 
+  it('объясняет запрет экспедиции в исследованный мир и условие закрытия критичного маршрута', () => {
+    const explored = domainState({ worlds: [world({ researchStatus: 'explored', researchProgress: 100 })] });
+    expect(actionAvailability(explored, explored.portals[0]!, 1, gameBalance).send).toContain('уже исследован');
+    const critical = portal({ riskStatus: 'critical', wasCritical: true, energy: 10 });
+    const reserve = portal({ id: 'reserve', stability: 1, dissipationCoefficient: 0,
+      initialLifetimeSeconds: null });
+    const withReserve = domainState({ portals: [critical, reserve] });
+    expect(actionAvailability(withReserve, critical, 1, gameBalance).close).toBeNull();
+    const withoutReserve = domainState({ portals: [critical] });
+    expect(actionAvailability(withoutReserve, critical, 1, gameBalance).close).toContain('надёжный маршрут');
+  });
+
   it('объясняет риск изоляции и исчерпание попыток', () => {
     const state = domainState({
       worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],

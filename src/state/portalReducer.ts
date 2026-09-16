@@ -18,8 +18,8 @@ import type {
 } from '../domain/types';
 import type { ReviewScenario } from '../domain/demoScenario';
 
-export type PortalFilter = 'all' | 'stable' | 'dangerous' | 'critical' | 'collapsed';
-export type ActiveView = 'portals' | 'worklog';
+export type PortalFilter = 'all' | 'stable' | 'dangerous' | 'critical' | 'collapsed' | 'closed';
+export type ActiveView = 'portals' | 'events' | 'results' | 'worklog';
 
 export interface Notification {
   kind: 'info' | 'success' | 'error';
@@ -34,6 +34,7 @@ export interface AppState extends DomainState {
   activeView: ActiveView;
   notification: Notification | null;
   storageWarning: string | null;
+  awaitingStart: boolean;
 }
 
 export type PortalAction =
@@ -54,6 +55,7 @@ export type PortalAction =
   | { type: 'stabilizePortal'; portalId: string }
   | { type: 'closePortal'; portalId: string; confirmed: boolean }
   | { type: 'newGame' }
+  | { type: 'startGame'; scenario: ReviewScenario }
   | { type: 'restoreDemo'; scenario?: ReviewScenario }
   | { type: 'clearHistory'; confirmed: boolean };
 
@@ -67,6 +69,7 @@ export function createAppState(domain: DomainState): AppState {
     activeView: 'portals',
     notification: null,
     storageWarning: null,
+    awaitingStart: false,
   };
 }
 
@@ -100,6 +103,7 @@ function resetOperationalState(
     activeView: 'portals',
     notification: null,
     storageWarning: null,
+    awaitingStart: false,
   };
 }
 
@@ -131,7 +135,16 @@ export function createPortalReducer(
               : state.selectedPortalId,
         };
       case 'setFilter':
-        return { ...state, portalFilter: action.filter };
+        return {
+          ...state,
+          portalFilter: action.filter,
+          selectedPortalId: state.portals.some((portal) => portal.id === state.selectedPortalId && (
+            action.filter === 'all' ? portal.lifecycle === 'active' :
+            action.filter === 'closed' || action.filter === 'collapsed'
+              ? portal.lifecycle === action.filter
+              : portal.lifecycle === 'active' && portal.riskStatus === action.filter
+          )) ? state.selectedPortalId : null,
+        };
       case 'setView':
         return { ...state, activeView: action.view };
       case 'dismissNotification':
@@ -171,13 +184,41 @@ export function createPortalReducer(
           state,
           stabilizePortal(state, action.portalId, dependencies, config),
         );
-      case 'closePortal':
-        return domainResultToState(
-          state,
-          closePortal(state, action.portalId, action.confirmed, dependencies, config),
-        );
+      case 'closePortal': {
+        const result = closePortal(state, action.portalId, action.confirmed, dependencies, config);
+        const next = domainResultToState(state, result);
+        return result.ok ? { ...next, portalFilter: 'closed' } : next;
+      }
       case 'newGame':
-        return resetOperationalState(state, createInitialState(dependencies, config));
+        return { ...resetOperationalState(state, createInitialState(dependencies, config)), awaitingStart: true };
+      case 'startGame': {
+        if (!state.awaitingStart) return state;
+        if (action.scenario === 'normal') return {
+          ...state,
+          awaitingStart: false,
+          cycle: { ...state.cycle, startedAt: dependencies.now() },
+        };
+        const demo = createReviewScenario(action.scenario, config);
+        const cycleId = state.cycle.id;
+        const startedAt = dependencies.now();
+        const started = resetOperationalState(state, {
+          ...demo,
+          cycle: {
+            ...demo.cycle,
+            id: cycleId,
+            startedAt,
+            result: demo.cycle.result
+              ? { ...demo.cycle.result, id: cycleId, startedAt, finishedAt: startedAt }
+              : null,
+          },
+        });
+        return {
+          ...started,
+          resultHistory: started.cycle.result
+            ? appendResultOnce(started.resultHistory, started.cycle.result)
+            : started.resultHistory,
+        };
+      }
       case 'restoreDemo': {
         const demo = action.scenario
           ? createReviewScenario(action.scenario, config)

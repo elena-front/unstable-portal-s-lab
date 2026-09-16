@@ -13,6 +13,7 @@ function Probe() {
       <button onClick={() => dispatch({ type: 'setFilter', filter: 'critical' })}>
         Фильтр
       </button>
+      <button onClick={() => dispatch({ type: 'startGame', scenario: 'normal' })}>Начать</button>
       <output aria-label="Фильтр">{state.portalFilter}</output>
     </div>
   );
@@ -24,6 +25,16 @@ describe('PortalProvider', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     localStorage.clear();
+  });
+
+  it('не запускает таймер до выбора сценария', () => {
+    vi.useFakeTimers();
+    render(<PortalProvider dependencies={testDependencies()} storage={localStorage}><Probe /></PortalProvider>);
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(screen.getByLabelText('Время')).toHaveTextContent('0');
+    act(() => { screen.getByRole('button', { name: 'Начать' }).click(); });
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.getByLabelText('Время')).toHaveTextContent('1');
   });
 
   it('ставит симуляцию на паузу в скрытой вкладке без догоняющего времени', () => {
@@ -39,6 +50,7 @@ describe('PortalProvider', () => {
         <Probe />
       </PortalProvider>,
     );
+    act(() => { screen.getByRole('button', { name: 'Начать' }).click(); });
     act(() => { vi.advanceTimersByTime(2000); });
     expect(screen.getByLabelText('Время')).toHaveTextContent('2');
 

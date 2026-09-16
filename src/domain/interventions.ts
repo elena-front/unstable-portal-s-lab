@@ -209,15 +209,20 @@ export function closePortal(
   let reason: Portal['closedReason'] = 'collapsed-cleared';
   if (portal.lifecycle === 'active') {
     const world = state.worlds.find((candidate) => candidate.id === portal.destinationWorldId);
-    if (!world || world.researchStatus !== 'explored') {
-      return rejected(state, dependencies, 'portal', 'Можно закрыть только портал в исследованный мир.');
+    if (!world) return rejected(state, dependencies, 'portal', 'Мир назначения не найден.');
+    if (world.researchStatus !== 'explored' && portal.riskStatus !== 'critical') {
+      return rejected(state, dependencies, 'portal', 'Неисследованный мир: закрытие доступно только критичному порталу.');
     }
     const count = employeesInWorld(state, world.id).length;
+    const reserve = findReliableReserve(state, portal, count, 0, config);
+    if (world.researchStatus !== 'explored' && !reserve) {
+      return rejected(state, dependencies, 'portal', 'Для закрытия критичного портала нужен другой надёжный маршрут в этот мир.');
+    }
     if (count > 0) {
       if (!confirmed) {
         return rejected(state, dependencies, 'portal', 'Подтвердите закрытие портала с сотрудниками в мире.');
       }
-      if (!findReliableReserve(state, portal, count, 0, config)) {
+      if (!reserve) {
         return rejected(state, dependencies, 'portal', 'Закрытие оставит сотрудников без надёжного маршрута.');
       }
     }

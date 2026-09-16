@@ -98,6 +98,11 @@ export function sendResearchers(
   if (portal.riskStatus === 'critical') {
     return rejected(state, dependencies, 'Нельзя отправлять сотрудников в критичный портал.');
   }
+  const destination = state.worlds.find((candidate) => candidate.id === portal.destinationWorldId);
+  if (!destination) return rejected(state, dependencies, 'Мир назначения не найден.');
+  if (destination.researchStatus === 'explored') {
+    return rejected(state, dependencies, 'Мир уже исследован. Новая экспедиция не нужна.');
+  }
   if (employeeIds.length < 1 || employeeIds.length > config.maxExpeditionSize) {
     return rejected(
       state,

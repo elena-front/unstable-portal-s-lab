@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createInitialState } from './gameFactory';
 import { createDemoScenario } from './demoScenario';
-import { tickGame } from './gameCycle';
+import { missionSummary, tickGame } from './gameCycle';
 import {
   domainState,
   employee,
@@ -12,6 +12,13 @@ import {
 } from '../test/domainFixtures';
 
 describe('игровой цикл', () => {
+  it('считает выполнение миссии и процент выживших', () => {
+    const base = { id: 'g', startedAt: '', finishedAt: '', exploredWorlds: 6,
+      totalWorlds: 6, returnedEmployees: 9, lostEmployees: 3,
+      closedPortals: 0, collapsedPortals: 0, stabilizationAttemptsUsed: 0 };
+    expect(missionSummary(base)).toEqual({ completed: true, score: 75 });
+    expect(missionSummary({ ...base, exploredWorlds: 5 })).toEqual({ completed: false, score: 75 });
+  });
   it('создаёт шесть миров, двенадцать сотрудников и использует внедрённый баланс', () => {
     const state = createInitialState(
       testDependencies(() => 0),

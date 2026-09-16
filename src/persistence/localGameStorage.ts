@@ -228,6 +228,7 @@ interface SavedCurrent {
   selectedPortalId: string | null;
   portalFilter: PortalFilter;
   activeView: ActiveView;
+  awaitingStart?: boolean;
 }
 
 interface SavedHistory {
@@ -242,8 +243,9 @@ function validCurrent(value: unknown, config: GameBalanceConfig): value is Saved
     value.version === STORAGE_VERSION &&
     validDomain(value.domain, config) &&
     (value.selectedPortalId === null || string(value.selectedPortalId)) &&
-    member(value.portalFilter, ['all', 'stable', 'dangerous', 'critical', 'collapsed']) &&
-    member(value.activeView, ['portals', 'worklog'])
+    member(value.portalFilter, ['all', 'stable', 'dangerous', 'critical', 'collapsed', 'closed']) &&
+    member(value.activeView, ['portals', 'events', 'results', 'worklog']) &&
+    (value.awaitingStart === undefined || typeof value.awaitingStart === 'boolean')
   );
 }
 
@@ -301,6 +303,9 @@ export function loadAppState(
         : null;
     state.portalFilter = current.portalFilter;
     state.activeView = current.activeView;
+    state.awaitingStart = current.awaitingStart ?? false;
+  } else {
+    state.awaitingStart = true;
   }
   if (history) {
     state.resultHistory = history.results;
@@ -341,6 +346,7 @@ export function saveAppState(
     selectedPortalId: state.selectedPortalId,
     portalFilter: state.portalFilter,
     activeView: state.activeView,
+    awaitingStart: state.awaitingStart,
   };
   const history: SavedHistory = {
     version: STORAGE_VERSION,
