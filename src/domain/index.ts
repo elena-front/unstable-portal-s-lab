@@ -1,4 +1,5 @@
 export { gameBalance } from '../config/gameBalance';
+export * from './actionAvailability';
 export type { GameBalanceConfig, NumberRange } from '../config/gameBalance';
 export * from './expeditions';
 export * from './demoScenario';

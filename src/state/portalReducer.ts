@@ -2,6 +2,7 @@ import type { GameBalanceConfig } from '../config/gameBalance';
 import {
   closePortal,
   createDemoScenario,
+  createReviewScenario,
   createInitialState,
   returnEmployees,
   sendObserver,
@@ -15,6 +16,7 @@ import type {
   DomainState,
   GameResult,
 } from '../domain/types';
+import type { ReviewScenario } from '../domain/demoScenario';
 
 export type PortalFilter = 'all' | 'stable' | 'dangerous' | 'critical' | 'collapsed';
 export type ActiveView = 'portals' | 'worklog';
@@ -52,7 +54,7 @@ export type PortalAction =
   | { type: 'stabilizePortal'; portalId: string }
   | { type: 'closePortal'; portalId: string; confirmed: boolean }
   | { type: 'newGame' }
-  | { type: 'restoreDemo' }
+  | { type: 'restoreDemo'; scenario?: ReviewScenario }
   | { type: 'clearHistory'; confirmed: boolean };
 
 export function createAppState(domain: DomainState): AppState {
@@ -177,15 +179,25 @@ export function createPortalReducer(
       case 'newGame':
         return resetOperationalState(state, createInitialState(dependencies, config));
       case 'restoreDemo': {
-        const demo = createDemoScenario(config);
-        return resetOperationalState(state, {
+        const demo = action.scenario
+          ? createReviewScenario(action.scenario, config)
+          : createDemoScenario(config);
+        const cycleId = dependencies.createId('game');
+        const startedAt = dependencies.now();
+        const operational = resetOperationalState(state, {
           ...demo,
           cycle: {
             ...demo.cycle,
-            id: dependencies.createId('game'),
-            startedAt: dependencies.now(),
+            id: cycleId,
+            startedAt,
+            result: demo.cycle.result
+              ? { ...demo.cycle.result, id: cycleId, startedAt, finishedAt: dependencies.now() }
+              : null,
           },
         });
+        return operational.cycle.result
+          ? { ...operational, resultHistory: appendResultOnce(operational.resultHistory, operational.cycle.result) }
+          : operational;
       }
       case 'clearHistory':
         if (!action.confirmed) {
