@@ -24,6 +24,21 @@ describe('случайный директор порталов', () => {
     expect(next.portals[0]?.destinationWorldId).toBe('hidden');
   });
 
+  it.each([
+    [0.1, 'stable'],
+    [0.65, 'dangerous'],
+    [0.95, 'critical'],
+  ] as const)('может открыть портал с начальным риском %s и статусом %s', (riskDraw, status) => {
+    const dependencies = testDependencies(sequenceRandom([
+      0.5, 0.5, 0.8, 0.8, 0, riskDraw, 0.5,
+    ]));
+    const state = domainState({ worlds: [world({ visibility: 'hidden' })], portals: [] });
+    const next = spawnPortal(state, dependencies, testConfig());
+    expect(next.portals[0]?.riskStatus).toBe(status);
+    expect(next.portals[0]?.lifecycle).toBe('active');
+    expect(next.portals[0]?.openingGraceSecondsRemaining).toBe(20);
+  });
+
   it('после двух известных назначений принудительно выбирает скрытый мир', () => {
     const state = domainState({
       cycle: { ...domainState().cycle, knownWorldStreak: 2 },
@@ -56,14 +71,25 @@ describe('случайный директор порталов', () => {
     expect(spawned.portals).toHaveLength(2);
   });
 
-  it('по умолчанию не создаёт 21-й незакрытый портал', () => {
+  it('после первых трёх открытий использует обычный интервал', () => {
+    const config = testConfig({ earlyPortalDelayRange: [5, 5], nextPortalDelayRange: [30, 30] });
+    const dependencies = testDependencies();
+    const first = spawnPortal(domainState({ portals: [] }), dependencies, config);
+    const second = spawnPortal(first, dependencies, config);
+    const third = spawnPortal(second, dependencies, config);
+    expect(first.cycle.nextPortalInSeconds).toBe(5);
+    expect(second.cycle.nextPortalInSeconds).toBe(5);
+    expect(third.cycle.nextPortalInSeconds).toBe(30);
+  });
+
+  it('по умолчанию соблюдает лимит незакрытых каналов', () => {
     const state = domainState({
-      portals: Array.from({ length: 20 }, (_, index) =>
+      portals: Array.from({ length: testConfig().maxUnclosedPortals }, (_, index) =>
         portal({ id: `portal-${index}`, lifecycle: index === 0 ? 'collapsed' : 'active' }),
       ),
     });
     const next = spawnPortal(state, testDependencies(), testConfig());
-    expect(next.portals).toHaveLength(20);
+    expect(next.portals).toHaveLength(testConfig().maxUnclosedPortals);
     expect(next.cycle.spawnPending).toBe(true);
   });
 });

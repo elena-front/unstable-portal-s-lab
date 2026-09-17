@@ -175,7 +175,7 @@ describe('закрытие порталов', () => {
     expect(sooner.value.cycle.nextPortalInSeconds).toBe(2);
   });
 
-  it('разрешает ручное закрытие активного портала только в исследованный мир', () => {
+  it('разрешает закрыть стабильный канал в исследованный мир без резерва', () => {
     const unexplored = closePortal(
       domainState(),
       'portal-1',
@@ -194,6 +194,15 @@ describe('закрытие порталов', () => {
     );
     expect(explored.ok).toBe(true);
     expect(explored.value.portals[0]?.closedReason).toBe('manual');
+  });
+
+  it('разрешает закрыть стабильный канал в неисследованный мир при надёжном резерве', () => {
+    const main = portal({ riskStatus: 'stable' });
+    const reserve = portal({ id: 'reserve', stability: 1, dissipationCoefficient: 0,
+      initialLifetimeSeconds: null });
+    const state = domainState({ portals: [main, reserve] });
+    expect(closePortal(state, main.id, false, dependencies, config).ok).toBe(true);
+    expect(closePortal({ ...state, portals: [main] }, main.id, false, dependencies, config).ok).toBe(false);
   });
 
   it('не позволяет закрыть последний маршрут к сотруднику', () => {

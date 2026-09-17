@@ -42,7 +42,6 @@ describe('PortalProvider', () => {
     let hidden = false;
     vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
     const config = testConfig({
-      firstPortalDelayRange: [100, 100],
       cycleDurationSeconds: 30,
     });
     render(

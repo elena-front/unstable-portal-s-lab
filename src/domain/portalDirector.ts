@@ -65,13 +65,19 @@ function createPortal(
     stabilizationBonus: 0,
     initialLifetimeSeconds: null,
     coefficientAgeSeconds: 0,
+    openingGraceSecondsRemaining: config.newPortalGraceSeconds,
     wasCritical: false,
     riskStatus: 'stable',
     lifecycle: 'active',
     closedReason: null,
   };
+  const lifetime = remainingLifetime(base, config);
+  const initialRisk = randomFloat(dependencies.random, config.initialPortalRiskRange);
+  const withInitialRisk = Number.isFinite(lifetime)
+    ? { ...base, initialLifetimeSeconds: lifetime / (1 - initialRisk) }
+    : base;
   return synchronizePortal(
-    base,
+    withInitialRisk,
     employeesInWorld(state, world.id).length,
     config,
   );
@@ -100,7 +106,9 @@ export function spawnPortal(
       ...state.cycle,
       nextPortalInSeconds: randomFloat(
         dependencies.random,
-        config.nextPortalDelayRange,
+        state.portals.length + 1 < config.earlyPortalCount
+          ? config.earlyPortalDelayRange
+          : config.nextPortalDelayRange,
       ),
       spawnPending: false,
       knownWorldStreak: wasHidden ? 0 : state.cycle.knownWorldStreak + 1,

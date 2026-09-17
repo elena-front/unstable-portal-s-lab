@@ -66,6 +66,7 @@ export interface Portal {
   stabilizationBonus: number;
   initialLifetimeSeconds: number | null;
   coefficientAgeSeconds: number;
+  openingGraceSecondsRemaining?: number;
   wasCritical: boolean;
   riskStatus: RiskStatus;
   lifecycle: PortalLifecycle;

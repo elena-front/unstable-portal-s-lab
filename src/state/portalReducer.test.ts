@@ -62,6 +62,16 @@ describe('Portal reducer', () => {
     expect(restarted.events).toHaveLength(0);
   });
 
+  it('открывает первый портал сразу при старте обычной партии', () => {
+    const awaiting = reducer(createAppState(domainState()), { type: 'newGame' });
+    expect(awaiting.portals).toHaveLength(0);
+    const started = reducer(awaiting, { type: 'startGame', scenario: 'normal' });
+    expect(started.cycle.elapsedSeconds).toBe(0);
+    expect(started.portals).toHaveLength(1);
+    expect(started.worlds.find((world) => world.id === started.portals[0]?.destinationWorldId)?.visibility)
+      .toBe('revealed');
+  });
+
   it('очищает историю только после подтверждения и не удаляет итог текущей партии', () => {
     const finished = reducer(
       createAppState(domainState({
@@ -112,7 +122,7 @@ describe('Portal reducer', () => {
     const demo = reducer(finished, { type: 'restoreDemo' });
     expect(demo.cycle.status).toBe('running');
     expect(demo.cycle.id).not.toBe(finished.cycle.id);
-    expect(demo.worlds).toHaveLength(8);
+    expect(demo.worlds).toHaveLength(9);
     expect(demo.portals.length).toBeGreaterThan(0);
     expect(demo.resultHistory).toHaveLength(1);
   });

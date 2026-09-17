@@ -18,6 +18,20 @@ function renderGame(start = true) {
 afterEach(() => { cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('App', () => {
+  it('раскрывает дополнительные характеристики выбранного канала', () => {
+    expect(saveAppState(localStorage, createAppState(domainState()))).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    const detail = screen.getByRole('region', { name: 'Детали портала' });
+    const details = within(detail).getByText('Показать все характеристики портала').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    expect(details?.previousElementSibling).toHaveTextContent('Риск — доля истёкшего расчётного времени жизни.');
+    expect(within(detail).getByText(/Мир «Аэрис» · Не исследован/)).toBeInTheDocument();
+    fireEvent.click(within(detail).getByText('Показать все характеристики портала'));
+    expect(details).toHaveAttribute('open');
+    expect(within(detail).getByRole('heading', { name: 'Экспедиция' })).toBeInTheDocument();
+    expect(within(detail).getByRole('heading', { name: 'Управление порталом' })).toBeInTheDocument();
+  });
   it('показывает легенду и выбор сценария только перед началом партии', () => {
     renderGame(false);
     expect(screen.getByRole('heading', { name: 'Краткие правила' })).toBeInTheDocument();
@@ -25,15 +39,18 @@ describe('App', () => {
     expect(screen.getByText(/готовые ситуации для проверки отдельных правил/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Начать партию' }));
     expect(screen.queryByLabelText('Режим запуска')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Список порталов' }).querySelector('button')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Новая партия' }));
     expect(screen.getByLabelText('Режим запуска')).toHaveValue('normal');
   });
 
-  it('показывает сводку, миры и навигацию', () => {
+  it('показывает девять миров без верхней сводки порталов и сохраняет навигацию', () => {
     renderGame();
     expect(screen.getByRole('heading', { name: 'Лаборатория нестабильных порталов' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Сводка порталов' })).toHaveTextContent('Незакрытые');
+    expect(screen.queryByRole('region', { name: 'Сводка порталов' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Миры' })).toBeInTheDocument();
+    expect(screen.getByText('0 / 9 исследовано')).toBeInTheDocument();
+    expect(screen.getAllByRole('progressbar')).toHaveLength(9);
     fireEvent.click(screen.getByRole('button', { name: 'AI Worklog' }));
     expect(screen.getByRole('heading', { name: 'AI Worklog' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Вклад в работу' })).toBeInTheDocument();
@@ -49,29 +66,60 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Размер группы'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Отправить сотрудников' }));
     expect(screen.getByText('В лаборатории: 0 из 2')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Вернуть всех (2)' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Вернуть всех (2)' }));
+    expect(screen.getByRole('button', { name: 'Вернуть сотрудников (2)' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуть сотрудников (2)' }));
     expect(screen.getByText('В лаборатории: 2 из 2')).toBeInTheDocument();
   });
 
-  it('требует подтверждение аварийного возвращения', () => {
+  it('при нехватке энергии критичного портала предлагает безопасный маршрут', () => {
     const initial = createAppState(domainState({
-      portals: [portal({ riskStatus: 'critical', energy: 40, wasCritical: true })],
+      portals: [portal({ riskStatus: 'critical', energy: 3, wasCritical: true }),
+        portal({ id: 'safe', name: 'Безопасный маршрут', dissipationCoefficient: 0, stability: 1,
+          initialLifetimeSeconds: null })],
       employees: [employee('employee-1', { location: { worldId: 'world-1' } })],
     }));
     expect(saveAppState(localStorage, initial)).toBeNull();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderGame();
+    fireEvent.click(screen.getByRole('button', { name: 'Критичные' }));
     fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     expect(within(detail).getByRole('button', { name: 'Отправить сотрудников' })).toBeDisabled();
-    fireEvent.click(within(detail).getByRole('button', { name: /Вернуть всех/ }));
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(within(detail).getByRole('button', { name: 'Вернуть сотрудников (0)' })).toBeDisabled();
+    expect(within(detail).getByText('Энергии недостаточно даже для одного сотрудника.')).toBeInTheDocument();
     expect(screen.getByText('В лаборатории: 0 из 1')).toBeInTheDocument();
-    confirm.mockReturnValue(true);
-    fireEvent.click(within(detail).getByRole('button', { name: /Вернуть всех/ }));
+    fireEvent.click(within(detail).getByRole('button', { name: 'Выбрать маршрут: Безопасный маршрут' }));
+    expect(screen.getByRole('button', { name: 'Все активные' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
     expect(screen.getByText('В лаборатории: 1 из 1')).toBeInTheDocument();
-    expect(within(detail).getByRole('button', { name: 'Закрыть схлопнувшийся портал' })).toHaveFocus();
+  });
+
+  it('возвращает сотрудника через критичный портал при достаточной энергии', () => {
+    const initial = createAppState(domainState({
+      portals: [portal({ riskStatus: 'critical', energy: 40, wasCritical: true })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+    }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    const detail = screen.getByRole('region', { name: 'Детали портала' });
+    expect(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' })).toBeEnabled();
+    fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
+    expect(screen.getByText('В лаборатории: 1 из 1')).toBeInTheDocument();
+  });
+
+  it('предлагает частичный возврат, если энергии на всех недостаточно', () => {
+    const initial = createAppState(domainState({
+      portals: [portal({ energy: 10, initialLifetimeSeconds: 100 })],
+      employees: [employee('first', { location: { worldId: 'world-1' } }),
+        employee('second', { location: { worldId: 'world-1' } })],
+    }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    const detail = screen.getByRole('region', { name: 'Детали портала' });
+    expect(within(detail).getByText(/Энергии хватит на 1 из 2/)).toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
+    expect(screen.getByText('В лаборатории: 1 из 2')).toBeInTheDocument();
   });
 
   it('показывает изменение риска после обновления времени и коэффициентов', () => {
@@ -83,9 +131,9 @@ describe('App', () => {
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
-    expect(screen.getByText('40% · Стабильный')).toBeInTheDocument();
+    expect(screen.getByText('Риск').closest('div')).toHaveTextContent('40%');
     act(() => { vi.advanceTimersByTime(60000); });
-    expect(screen.getByText('0% · Стабильный')).toBeInTheDocument();
+    expect(screen.getByText('Риск').closest('div')).toHaveTextContent('0%');
     vi.useRealTimers();
   });
 

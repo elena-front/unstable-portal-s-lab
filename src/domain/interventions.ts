@@ -208,13 +208,10 @@ export function closePortal(
   if (portal.lifecycle === 'active') {
     const world = state.worlds.find((candidate) => candidate.id === portal.destinationWorldId);
     if (!world) return rejected(state, dependencies, 'portal', 'Мир назначения не найден.');
-    if (world.researchStatus !== 'explored' && portal.riskStatus !== 'critical') {
-      return rejected(state, dependencies, 'portal', 'Неисследованный мир: закрытие доступно только критичному порталу.');
-    }
     const count = employeesInWorld(state, world.id).length;
     const reserve = findReliableReserve(state, portal, count, 0, config);
     if (world.researchStatus !== 'explored' && !reserve) {
-      return rejected(state, dependencies, 'portal', 'Для закрытия критичного портала нужен другой надёжный маршрут в этот мир.');
+      return rejected(state, dependencies, 'portal', 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.');
     }
     if (count > 0) {
       if (!confirmed) {

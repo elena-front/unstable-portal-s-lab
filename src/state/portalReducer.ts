@@ -7,6 +7,7 @@ import {
   returnEmployees,
   sendObserver,
   sendResearchers,
+  spawnPortal,
   stabilizePortal,
   tickGame,
 } from '../domain';
@@ -56,7 +57,6 @@ export type PortalAction =
       type: 'returnEmployees';
       portalId: string;
       employeeIds: string[];
-      emergencyConfirmed: boolean;
     }
   | { type: 'sendObserver'; portalId: string; employeeId: string }
   | { type: 'stabilizePortal'; portalId: string }
@@ -180,7 +180,6 @@ export function createPortalReducer(
             state,
             action.portalId,
             action.employeeIds,
-            action.emergencyConfirmed,
             dependencies,
             config,
           ),
@@ -203,11 +202,16 @@ export function createPortalReducer(
         return { ...resetOperationalState(state, createInitialState(dependencies, config)), awaitingStart: true };
       case 'startGame': {
         if (!state.awaitingStart) return state;
-        if (action.scenario === 'normal') return {
-          ...state,
-          awaitingStart: false,
-          cycle: { ...state.cycle, startedAt: dependencies.now() },
-        };
+        if (action.scenario === 'normal') {
+          const started = {
+            ...state,
+            awaitingStart: false,
+            cycle: { ...state.cycle, startedAt: dependencies.now() },
+          };
+          return started.portals.length === 0
+            ? { ...started, ...spawnPortal(started, dependencies, config) }
+            : started;
+        }
         const demo = createReviewScenario(action.scenario, config);
         const cycleId = state.cycle.id;
         const startedAt = dependencies.now();

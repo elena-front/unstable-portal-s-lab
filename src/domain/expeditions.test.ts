@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { returnEmployees, sendResearchers, transitCost } from './expeditions';
+import { findBetterReturnPortal, maxReturnCount, returnEmployees, sendResearchers, transitCost } from './expeditions';
 import { advanceResearch } from './research';
 import {
   domainState,
@@ -109,33 +109,58 @@ describe('экспедиции и исследование', () => {
     expect(next.worlds[0]?.researchStatus).toBe('explored');
   });
 
-  it('требует подтверждение критической эвакуации и затем схлопывает портал', () => {
+  it('разрешает оплачиваемый возврат через критичный портал', () => {
     const state = domainState({
       portals: [portal({ riskStatus: 'critical', energy: 50, wasCritical: true })],
       employees: [employee('e1', { location: { worldId: 'world-1' } })],
     });
-    const rejected = returnEmployees(
-      state,
-      'portal-1',
-      ['e1'],
-      false,
-      dependencies,
-      config,
-    );
-    expect(rejected.ok).toBe(false);
-
     const returned = returnEmployees(
       state,
       'portal-1',
       ['e1'],
-      true,
       dependencies,
       config,
     );
     expect(returned.ok).toBe(true);
     expect(returned.value.employees[0]?.location).toBe('lab');
-    expect(returned.value.portals[0]?.lifecycle).toBe('collapsed');
     expect(returned.value.portals[0]?.energy).toBe(43);
+  });
+
+  it('критичный портал возвращает часть группы, но блокирует переход без энергии', () => {
+    const critical = portal({ riskStatus: 'critical', energy: 10, wasCritical: true });
+    const state = domainState({ portals: [critical], employees: [
+      employee('first', { location: { worldId: 'world-1' } }),
+      employee('second', { location: { worldId: 'world-1' } }),
+    ] });
+    expect(maxReturnCount(critical, config)).toBe(1);
+    expect(returnEmployees(state, critical.id, ['first', 'second'], dependencies, config).ok).toBe(false);
+    const partial = returnEmployees(state, critical.id, ['first'], dependencies, config);
+    expect(partial.ok).toBe(true);
+    expect(partial.value.employees.find((person) => person.id === 'second')?.location)
+      .toEqual({ worldId: 'world-1' });
+    expect(partial.value.portals[0]?.lifecycle).toBe('active');
+    const empty = portal({ riskStatus: 'critical', energy: 3, wasCritical: true });
+    expect(maxReturnCount(empty, config)).toBe(0);
+    expect(returnEmployees({ ...state, portals: [empty] }, empty.id, ['first'], dependencies, config).ok)
+      .toBe(false);
+  });
+
+  it('разрешает только оплачиваемую часть группы и находит другой маршрут', () => {
+    const limited = portal({ energy: 10, initialLifetimeSeconds: 100 });
+    const safe = portal({ id: 'safe', riskStatus: 'stable', energy: 100,
+      dissipationCoefficient: 0, stability: 1, initialLifetimeSeconds: null });
+    const state = domainState({ portals: [limited, safe], employees: [
+      employee('first', { location: { worldId: 'world-1' } }),
+      employee('second', { location: { worldId: 'world-1' } }),
+    ] });
+    expect(maxReturnCount(limited, config)).toBe(1);
+    expect(findBetterReturnPortal(state, limited, 2, config)?.id).toBe('safe');
+    expect(returnEmployees(state, limited.id, ['first', 'second'], dependencies, config).ok).toBe(false);
+    const partial = returnEmployees(state, limited.id, ['first'], dependencies, config);
+    expect(partial.ok).toBe(true);
+    expect(partial.value.employees.find((person) => person.id === 'first')?.location).toBe('lab');
+    expect(partial.value.employees.find((person) => person.id === 'second')?.location)
+      .toEqual({ worldId: 'world-1' });
   });
 
   it('никогда не разрешает отправку в критичный портал', () => {

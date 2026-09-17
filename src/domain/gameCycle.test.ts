@@ -27,13 +27,12 @@ describe('игровой цикл', () => {
         cycleDurationSeconds: 10,
         worldsCount: 2,
         initialEmployees: 3,
-        firstPortalDelayRange: [2, 2],
       }),
     );
     expect(state.worlds).toHaveLength(2);
     expect(state.employees).toHaveLength(3);
     expect(state.cycle.durationSeconds).toBe(10);
-    expect(state.cycle.nextPortalInSeconds).toBe(2);
+    expect(state.cycle.nextPortalInSeconds).toBe(0);
   });
 
   it('ускоряет новый портал после автоматического досрочного закрытия', () => {
@@ -46,10 +45,11 @@ describe('игровой цикл', () => {
     expect(next.cycle.nextPortalInSeconds).toBe(5);
   });
 
-  it('создаёт повторяемый демонстрационный сценарий с восемью мирами', () => {
+  it('создаёт повторяемый демонстрационный сценарий с девятью мирами', () => {
     const first = createDemoScenario();
     expect(first).toEqual(createDemoScenario());
-    expect(first.worlds).toHaveLength(8);
+    expect(first.worlds).toHaveLength(9);
+    expect(first.worlds.map((world) => world.name).slice(-3)).toEqual(['Орион', 'Велар', 'Искра']);
     expect(first.employees).toHaveLength(12);
     expect(first.portals.length).toBeGreaterThan(0);
   });
@@ -66,7 +66,7 @@ describe('игровой цикл', () => {
     const config = testConfig({
       cycleDurationSeconds: 20,
       worldsCount: 1,
-      firstPortalDelayRange: [2, 2],
+      earlyPortalDelayRange: [3, 3],
       nextPortalDelayRange: [3, 3],
       portalEnergyRange: [100, 100],
       dissipationRange: [0, 0],
@@ -76,7 +76,7 @@ describe('игровой цикл', () => {
     const next = tickGame(initial, 8, dependencies, config);
     expect(next.portals).toHaveLength(3);
     expect(next.cycle.elapsedSeconds).toBe(8);
-    expect(next.cycle.nextPortalInSeconds).toBe(3);
+    expect(next.cycle.nextPortalInSeconds).toBe(2);
   });
 
   it('завершает строго по таймеру и считает сотрудников вне лаборатории потерянными', () => {

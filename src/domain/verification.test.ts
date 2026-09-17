@@ -39,7 +39,7 @@ describe('проверочный чеклист', () => {
       employees: [employee('field', { location: { worldId: 'world-1' } }), employee('free')],
     });
     expect(state.portals.every((route) => employeesInWorld(state, route.destinationWorldId).length === 1)).toBe(true);
-    const returned = returnEmployees(state, 'portal-2', ['field'], false, testDependencies(), testConfig());
+    const returned = returnEmployees(state, 'portal-2', ['field'], testDependencies(), testConfig());
     expect(returned.ok).toBe(true);
     expect(returned.value.portals.every((route) => employeesInWorld(returned.value, route.destinationWorldId).length === 0)).toBe(true);
   });
@@ -66,10 +66,10 @@ describe('проверочный чеклист', () => {
 
   it('возвращает группу до схлопывания портала без второго резерва', () => {
     const state = domainState({
-      portals: [portal({ energy: 2 })],
+      portals: [portal({ energy: 7 })],
       employees: [employee('field', { location: { worldId: 'world-1' } })],
     });
-    const result = returnEmployees(state, 'portal-1', ['field'], false, testDependencies(), testConfig());
+    const result = returnEmployees(state, 'portal-1', ['field'], testDependencies(), testConfig());
     expect(result.ok).toBe(true);
     expect(result.value.employees[0]?.location).toBe('lab');
     expect(result.value.portals[0]?.lifecycle).toBe('collapsed');
@@ -100,7 +100,7 @@ describe('проверочный чеклист', () => {
   });
 
   it('сохраняет первый результат и добавляет второй после новой партии', () => {
-    const config = testConfig({ cycleDurationSeconds: 10, firstPortalDelayRange: [100, 100] });
+    const config = testConfig({ cycleDurationSeconds: 10 });
     const reducer = createPortalReducer(testDependencies(), config);
     const first = createAppState(domainState({
       worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],

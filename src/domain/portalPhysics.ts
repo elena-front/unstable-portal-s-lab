@@ -69,7 +69,7 @@ export function synchronizePortal(
   const riskStatus = riskStatusFromRisk(portalRisk(initialized, config), config);
   const wasCritical = portal.wasCritical || riskStatus === 'critical';
 
-  if (wasCritical && employeeCount === 0) {
+  if (wasCritical && employeeCount === 0 && (portal.openingGraceSecondsRemaining ?? 0) <= 0) {
     return {
       ...initialized,
       wasCritical,
@@ -118,6 +118,9 @@ export function evolvePortal(
       ...next,
       energy: Math.max(0, next.energy - consumed),
       coefficientAgeSeconds: next.coefficientAgeSeconds + step,
+      openingGraceSecondsRemaining: next.openingGraceSecondsRemaining === undefined
+        ? undefined
+        : Math.max(0, next.openingGraceSecondsRemaining - step),
     };
     remainingDelta -= step;
     next = synchronizePortal(next, employeeCount, config);

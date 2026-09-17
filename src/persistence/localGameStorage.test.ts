@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadAppState, saveAppState, GAME_STORAGE_KEY, HISTORY_STORAGE_KEY } from './localGameStorage';
 import { createAppState, createPortalReducer } from '../state/portalReducer';
-import { domainState, testConfig, testDependencies } from '../test/domainFixtures';
+import { domainState, portal, testConfig, testDependencies } from '../test/domainFixtures';
 import { finishGame } from '../domain/gameCycle';
 import { createWorlds } from '../domain/gameFactory';
 
@@ -32,16 +32,27 @@ describe('версионированное локальное сохранени
     expect(loaded.storageWarning).toBeNull();
   });
 
-  it('продолжает сохранённую партию с шестью мирами, но создаёт восемь в новой', () => {
+  it('продолжает сохранённые партии с шестью и восемью мирами, но создаёт девять в новой', () => {
+    for (const count of [6, 8]) {
+      const storage = memoryStorage();
+      const oldWorlds = createWorlds(dependencies, testConfig({ worldsCount: count }));
+      const oldGame = createAppState(domainState({ worlds: oldWorlds }));
+      saveAppState(storage, oldGame);
+      const loaded = loadAppState(storage, dependencies, config);
+      expect(loaded.storageWarning).toBeNull();
+      expect(loaded.worlds).toHaveLength(count);
+      const restarted = createPortalReducer(dependencies, config)(loaded, { type: 'newGame' });
+      expect(restarted.worlds).toHaveLength(9);
+    }
+  });
+
+  it('загружает старую партию с двадцатью незакрытыми каналами', () => {
     const storage = memoryStorage();
-    const oldWorlds = createWorlds(dependencies, testConfig({ worldsCount: 6 }));
-    const oldGame = createAppState(domainState({ worlds: oldWorlds }));
-    saveAppState(storage, oldGame);
+    const portals = Array.from({ length: 20 }, (_, index) => portal({ id: `portal-${index}` }));
+    saveAppState(storage, createAppState(domainState({ portals })));
     const loaded = loadAppState(storage, dependencies, config);
     expect(loaded.storageWarning).toBeNull();
-    expect(loaded.worlds).toHaveLength(6);
-    const restarted = createPortalReducer(dependencies, config)(loaded, { type: 'newGame' });
-    expect(restarted.worlds).toHaveLength(8);
+    expect(loaded.portals).toHaveLength(20);
   });
 
   it('восстанавливает историю независимо от повреждённой партии', () => {

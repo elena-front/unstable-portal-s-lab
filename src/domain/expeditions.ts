@@ -51,6 +51,29 @@ export function energyAfterTransit(
   return Math.max(0, portal.energy - transitCost(portal, employeeCount, config));
 }
 
+export function maxReturnCount(portal: Portal, config: GameBalanceConfig): number {
+  if (portal.lifecycle !== 'active') return 0;
+  return Math.max(0, Math.floor(portal.energy / transitCostPerEmployee(portal, config)));
+}
+
+export function findBetterReturnPortal(
+  state: DomainState,
+  selectedPortal: Portal,
+  employeeCount: number,
+  config: GameBalanceConfig,
+): Portal | null {
+  const currentCapacity = maxReturnCount(selectedPortal, config);
+  return activePortalsToWorld(state, selectedPortal.destinationWorldId)
+    .filter((portal) => portal.id !== selectedPortal.id &&
+      portal.riskStatus !== 'critical' &&
+      maxReturnCount(portal, config) > currentCapacity)
+    .sort((a, b) =>
+      Number(maxReturnCount(b, config) >= employeeCount) - Number(maxReturnCount(a, config) >= employeeCount) ||
+      Number(b.riskStatus === 'stable') - Number(a.riskStatus === 'stable') ||
+      maxReturnCount(b, config) - maxReturnCount(a, config))
+    .at(0) ?? null;
+}
+
 export function findReliableReserve(
   state: DomainState,
   selectedPortal: Portal,
@@ -172,7 +195,6 @@ export function returnEmployees(
   state: DomainState,
   portalId: string,
   employeeIds: readonly string[],
-  emergencyConfirmed: boolean,
   dependencies: DomainDependencies,
   config: GameBalanceConfig,
 ): DomainResult {
@@ -195,13 +217,13 @@ export function returnEmployees(
   ) {
     return rejected(state, dependencies, 'Выбранные сотрудники не находятся в этом мире.');
   }
-  if (portal.riskStatus === 'critical' && !emergencyConfirmed) {
-    return rejected(state, dependencies, 'Подтвердите аварийную эвакуацию через критичный портал.');
+  if (selected.length > maxReturnCount(portal, config)) {
+    return rejected(state, dependencies, 'Энергии портала недостаточно для возвращения выбранной группы.');
   }
 
   const selectedIds = new Set(employeeIds);
   const energyAfter = energyAfterTransit(portal, selected.length, config);
-  const forceCollapse = portal.riskStatus === 'critical' || energyAfter === 0;
+  const forceCollapse = energyAfter === 0;
   let next: DomainState = {
     ...state,
     employees: state.employees.map((employee) =>

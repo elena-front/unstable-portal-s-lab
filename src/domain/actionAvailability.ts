@@ -1,5 +1,5 @@
 import type { GameBalanceConfig } from '../config/gameBalance';
-import { energyAfterTransit, findReliableReserve } from './expeditions';
+import { energyAfterTransit, findReliableReserve, maxReturnCount } from './expeditions';
 import { estimatedResearchSeconds } from './research';
 import { employeesInWorld, isStabilizationEligible, isVeryImportantPortal } from './selectors';
 import type { DomainState, Portal } from './types';
@@ -38,7 +38,8 @@ export function actionAvailability(
       (free < groupSize ? 'В лаборатории недостаточно сотрудников.' : null) ??
       (after === 0 && !reserve ? 'Переход исчерпает портал; надёжного маршрута возвращения нет.' : null),
     returnGroup: unavailable ?? notActive ??
-      (inWorld === 0 ? 'В этом мире нет сотрудников для возвращения.' : null),
+      (inWorld === 0 ? 'В этом мире нет сотрудников для возвращения.' : null) ??
+      (maxReturnCount(portal, config) === 0 ? 'Энергии недостаточно даже для одного сотрудника.' : null),
     stabilize: unavailable ?? notActive ??
       (!isStabilizationEligible(state, portal) ? 'Стабилизация доступна единственному стабильному маршруту или важному опасному/критичному порталу.' : null) ??
       (portal.stabilizationBonus >= config.maxStabilizationBonus ? 'Достигнут максимальный бонус стабилизации.' : null) ??
@@ -51,8 +52,7 @@ export function actionAvailability(
       (energyAfterTransit(portal, 1, config) === 0 ? 'Переход наблюдателя исчерпает портал.' : null),
     close: unavailable ??
       (portal.lifecycle === 'closed' ? 'Портал уже закрыт.' : null) ??
-      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && portal.riskStatus !== 'critical' ? 'Неисследованный мир: закрытие доступно только критичному порталу.' : null) ??
-      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия критичного портала нужен другой надёжный маршрут в этот мир.' : null) ??
+      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.' : null) ??
       (portal.lifecycle === 'active' && inWorld > 0 && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Закрытие оставит сотрудников без надёжного маршрута.' : null),
   };
 }

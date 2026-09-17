@@ -58,7 +58,7 @@ export function recommendationForPortal(portal: Portal): string {
   }
   if (portal.lifecycle === 'closed') return 'Портал закрыт, действий не требуется.';
   if (portal.riskStatus === 'critical') {
-    return 'Не отправляйте сотрудников; оцените стабилизацию или аварийную эвакуацию.';
+    return 'Не отправляйте сотрудников; для возвращения проверьте запас энергии и другой маршрут.';
   }
   if (portal.riskStatus === 'dangerous') {
     return 'Проверьте резервный маршрут и целесообразность стабилизации.';

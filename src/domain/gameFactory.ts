@@ -1,5 +1,5 @@
 import type { GameBalanceConfig } from '../config/gameBalance';
-import { randomFloat, randomInteger } from './random';
+import { randomInteger } from './random';
 import type { DomainDependencies, DomainState, Employee, World } from './types';
 
 export const WORLD_NAMES = [
@@ -9,6 +9,9 @@ export const WORLD_NAMES = [
   'Нимбус',
   'Таласса',
   'Эхо',
+  'Орион',
+  'Велар',
+  'Искра',
 ] as const;
 
 export function createWorlds(
@@ -47,10 +50,7 @@ export function createInitialState(
       startedAt: dependencies.now(),
       durationSeconds: config.cycleDurationSeconds,
       elapsedSeconds: 0,
-      nextPortalInSeconds: randomFloat(
-        dependencies.random,
-        config.firstPortalDelayRange,
-      ),
+      nextPortalInSeconds: 0,
       spawnPending: false,
       knownWorldStreak: 0,
       stabilizationAttemptsUsed: 0,

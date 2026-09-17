@@ -20,6 +20,7 @@ import {
 export const GAME_STORAGE_KEY = 'unstable-portals:current:v1';
 export const HISTORY_STORAGE_KEY = 'unstable-portals:history:v1';
 export const STORAGE_VERSION = 1;
+const LEGACY_MAX_UNCLOSED_PORTALS = 20;
 
 export interface StorageAdapter {
   getItem(key: string): string | null;
@@ -128,6 +129,9 @@ function validPortal(value: unknown, config: GameBalanceConfig): value is Portal
     validInitial &&
     nonnegative(value.coefficientAgeSeconds) &&
     value.coefficientAgeSeconds <= config.coefficientRefreshSeconds &&
+    (value.openingGraceSecondsRemaining === undefined ||
+      (nonnegative(value.openingGraceSecondsRemaining) &&
+        value.openingGraceSecondsRemaining <= config.newPortalGraceSeconds)) &&
     typeof value.wasCritical === 'boolean' &&
     member(value.riskStatus, ['stable', 'dangerous', 'critical']) &&
     member(value.lifecycle, ['active', 'collapsed', 'closed']) &&
@@ -195,7 +199,7 @@ function validDomain(value: unknown, config: GameBalanceConfig): value is Domain
     uniqueIds(events) &&
     portals.every((portal) => worldIds.has(portal.destinationWorldId)) &&
     portals.filter((portal) => portal.lifecycle !== 'closed').length <=
-      config.maxUnclosedPortals &&
+      Math.max(config.maxUnclosedPortals, LEGACY_MAX_UNCLOSED_PORTALS) &&
     employees.every((employee) =>
       employee.location === 'lab' || worldIds.has(employee.location.worldId),
     ) &&

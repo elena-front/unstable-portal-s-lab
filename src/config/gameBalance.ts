@@ -7,10 +7,13 @@ export interface GameBalanceConfig {
   maxExpeditionSize: number;
   maxUnclosedPortals: number;
   portalEnergyRange: NumberRange;
+  initialPortalRiskRange: NumberRange;
+  newPortalGraceSeconds: number;
   dissipationRange: NumberRange;
   stabilityRange: NumberRange;
   researchRequiredRange: NumberRange;
-  firstPortalDelayRange: NumberRange;
+  earlyPortalDelayRange: NumberRange;
+  earlyPortalCount: number;
   nextPortalDelayRange: NumberRange;
   earlyClosureDelaySeconds: number;
   hiddenWorldProbability: number;
@@ -36,16 +39,19 @@ export interface GameBalanceConfig {
 
 export const gameBalance: Readonly<GameBalanceConfig> = Object.freeze({
   cycleDurationSeconds: 600,
-  worldsCount: 8,
+  worldsCount: 9,
   initialEmployees: 12,
   maxExpeditionSize: 4,
-  maxUnclosedPortals: 20,
+  maxUnclosedPortals: 8,
   portalEnergyRange: [0, 100],
+  initialPortalRiskRange: [0, 0.95],
+  newPortalGraceSeconds: 20,
   dissipationRange: [0, 1],
   stabilityRange: [0, 1],
   researchRequiredRange: [90, 150],
-  firstPortalDelayRange: [3, 10],
-  nextPortalDelayRange: [15, 30],
+  earlyPortalDelayRange: [5, 9],
+  earlyPortalCount: 3,
+  nextPortalDelayRange: [25, 40],
   earlyClosureDelaySeconds: 5,
   hiddenWorldProbability: 0.65,
   knownWorldStreakLimit: 2,

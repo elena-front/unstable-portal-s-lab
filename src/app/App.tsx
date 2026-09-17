@@ -6,7 +6,9 @@ import {
   employeesInWorld,
   energyAfterTransit,
   estimatedResearchSeconds,
+  findBetterReturnPortal,
   findReliableReserve,
+  maxReturnCount,
   portalRisk,
   recommendationForPortal,
   remainingLifetime,
@@ -42,6 +44,7 @@ function priority(portal: Portal): number {
 export function App() {
   const { state, dispatch } = usePortals();
   const [groupSize, setGroupSize] = useState(1);
+  const [returnCount, setReturnCount] = useState(Number.POSITIVE_INFINITY);
   const [dismissedResultId, setDismissedResultId] = useState<string | null>(null);
   const collapsedActionRef = useRef<HTMLButtonElement>(null);
   const selectedRowRef = useRef<HTMLButtonElement>(null);
@@ -56,10 +59,6 @@ export function App() {
   const visible = state.portals
     .filter((portal) => portalMatchesFilter(portal, state.portalFilter))
     .sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, 'ru'));
-  const openCount = state.portals.filter((portal) => portal.lifecycle !== 'closed').length;
-  const criticalCount = state.portals.filter((portal) => portal.lifecycle === 'active' && portal.riskStatus === 'critical').length;
-  const closedCount = state.portals.filter((portal) => portal.lifecycle === 'closed').length;
-  const attentionCount = state.portals.filter((portal) => portal.lifecycle === 'collapsed' || (portal.lifecycle === 'active' && portal.riskStatus !== 'stable')).length;
   const exploredCount = state.worlds.filter((item) => item.researchStatus === 'explored').length;
   const observer = selected && state.employees.some((employee) => employee.role.type === 'observer' && employee.role.portalId === selected.id);
   const selectedCount = Math.min(groupSize, available.length);
@@ -68,9 +67,15 @@ export function App() {
     ? findReliableReserve(state, selected, selectedCount, estimatedResearchSeconds(world, inWorld.length + selectedCount), gameBalance)
     : null;
   const availability = selected ? actionAvailability(state, selected, groupSize, gameBalance) : null;
+  const returnCapacity = selected ? Math.min(inWorld.length, maxReturnCount(selected, gameBalance)) : 0;
+  const selectedReturnCount = Math.min(returnCount, returnCapacity);
+  const returnAlternative = selected && returnCapacity < inWorld.length
+    ? findBetterReturnPortal(state, selected, inWorld.length, gameBalance)
+    : null;
   const canSend = availability?.send === null;
 
   useEffect(() => { setGroupSize(1); }, [selected?.id]);
+  useEffect(() => { setReturnCount(Number.POSITIVE_INFINITY); }, [selected?.id]);
   useEffect(() => {
     if (previousSelectionRef.current && !state.selectedPortalId && document.activeElement === document.body) {
       currentFilterRef.current?.focus();
@@ -88,10 +93,9 @@ export function App() {
     dispatch({ type: 'sendResearchers', portalId: selected.id, employeeIds: available.slice(0, selectedCount).map((employee) => employee.id) });
   };
   const returnGroup = () => {
-    if (!selected || inWorld.length === 0) return;
-    const emergency = selected.riskStatus === 'critical';
-    if (emergency && !window.confirm('Аварийная эвакуация схлопнет портал. Вернуть всех сотрудников?')) return;
-    dispatch({ type: 'returnEmployees', portalId: selected.id, employeeIds: inWorld.map((employee) => employee.id), emergencyConfirmed: emergency });
+    if (!selected || availability?.returnGroup !== null || selectedReturnCount < 1) return;
+    dispatch({ type: 'returnEmployees', portalId: selected.id,
+      employeeIds: inWorld.slice(0, selectedReturnCount).map((employee) => employee.id) });
   };
   const close = () => {
     if (!selected) return;
@@ -128,9 +132,6 @@ export function App() {
         </section>
         {state.storageWarning && <p role="alert" className={styles.alert}>{state.storageWarning} Для проверки можно загрузить демосценарий ниже.</p>}
         {state.notification && <div role="status" className={styles.notice}><span>{state.notification.message}</span><button onClick={() => dispatch({ type: 'dismissNotification' })} aria-label="Закрыть уведомление">×</button></div>}
-        <section className={styles.metrics} aria-label="Сводка порталов">
-          <div><span>Незакрытые</span><strong>{openCount}</strong></div><div><span>Критические</span><strong>{criticalCount}</strong></div><div><span>Закрытые</span><strong>{closedCount}</strong></div><div><span>Требуют внимания</span><strong>{attentionCount}</strong></div>
-        </section>
         <section className={styles.worldSection} aria-labelledby="worlds-title"><div className={styles.sectionHeading}><h2 id="worlds-title">Миры</h2><span>{exploredCount} / {state.worlds.length} исследовано</span></div><div className={styles.worldGrid}>{state.worlds.map((item) => <div key={item.id} className={styles.world}><div><strong>{item.visibility === 'hidden' ? 'Неизвестный мир' : item.name}</strong><span>{item.visibility === 'hidden' ? 'Скрыт' : researchNames[item.researchStatus]}</span></div><progress aria-label={`Прогресс мира ${item.visibility === 'hidden' ? 'неизвестный' : item.name}`} value={item.researchProgress} max={item.researchRequired} /><small>{item.visibility === 'hidden' ? 'Ожидает открытия' : `${Math.floor(100 * item.researchProgress / item.researchRequired)}% · сотрудников: ${employeesInWorld(state, item.id).length}`}</small></div>)}</div></section>
         <div className={styles.sectionHeading}><h2>Порталы</h2><span>{visible.length} в списке</span></div>
         <div className={styles.filters} aria-label="Фильтр порталов">{(Object.keys(filterNames) as PortalFilter[]).map((filter) => <button key={filter} ref={state.portalFilter === filter ? currentFilterRef : undefined} aria-pressed={state.portalFilter === filter} onClick={() => dispatch({ type: 'setFilter', filter })}>{filterNames[filter]}</button>)}</div>
@@ -139,19 +140,25 @@ export function App() {
             const destination = state.worlds.find((item) => item.id === portal.destinationWorldId);
             return <button key={portal.id} ref={state.selectedPortalId === portal.id ? selectedRowRef : undefined} className={`${styles.portalRow} ${state.selectedPortalId === portal.id ? styles.selected : ''}`} aria-pressed={state.selectedPortalId === portal.id} onClick={() => dispatch({ type: 'selectPortal', portalId: portal.id })}><span><strong>{portal.name}</strong><small>{destination?.name ?? 'Мир неизвестен'} · {employeesInWorld(state, portal.destinationWorldId).length} чел.</small></span><span className={styles.rowStatus}>{portal.lifecycle === 'active' ? riskNames[portal.riskStatus] : lifecycleNames[portal.lifecycle]}<small>{portal.lifecycle === 'active' ? `Энергия ${portal.energy.toFixed(1)}` : ''}</small></span></button>;
           })}</section>
-          <section className={styles.detail} aria-label="Детали портала">{selected && world ? <><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>Выбранный портал</p><h2>{selected.name}</h2></div><span className={styles.badge}>{selected.lifecycle === 'active' ? riskNames[selected.riskStatus] : lifecycleNames[selected.lifecycle]}</span></div><p>Ведёт в мир «{world.name}». {recommendationForPortal(selected)}</p><dl className={styles.facts}><div><dt>Энергия</dt><dd>{selected.energy.toFixed(1)} / 100</dd></div><div><dt>Риск</dt><dd>{Math.round(portalRisk(selected, gameBalance) * 100)}% · {riskNames[selected.riskStatus]}</dd></div><div><dt>До схлопывания</dt><dd>{duration(remainingLifetime(selected, gameBalance))}</dd></div><div><dt>Рассеивание / стабильность</dt><dd>{selected.dissipationCoefficient.toFixed(2)} / {selected.stability.toFixed(2)}</dd></div><div><dt>В мире</dt><dd>{inWorld.length} сотрудников</dd></div></dl><p className={styles.hint}>Риск — доля истёкшего расчётного времени жизни. При 50% портал опасен, при 80% — критичен. Коэффициенты меняются раз в минуту.</p>
+          <section className={styles.detail} aria-label="Детали портала">{selected && world ? <><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>Выбранный портал</p><h2>{selected.name}</h2></div><span className={styles.badge}>{selected.lifecycle === 'active' ? riskNames[selected.riskStatus] : lifecycleNames[selected.lifecycle]}</span></div><p className={styles.portalSummary}>Мир «{world.name}» · {researchNames[world.researchStatus]}. {recommendationForPortal(selected)}</p><dl className={styles.facts}><div><dt>Риск</dt><dd>{Math.round(portalRisk(selected, gameBalance) * 100)}%</dd></div><div><dt>До схлопывания</dt><dd>{duration(remainingLifetime(selected, gameBalance))}</dd></div><div><dt>В мире</dt><dd>{inWorld.length} чел.</dd></div></dl><p className={styles.hint}>Риск — доля истёкшего расчётного времени жизни. При 50% портал опасен, при 80% — критичен. Коэффициенты меняются раз в минуту.</p><details className={styles.moreFacts}><summary>Показать все характеристики портала</summary><dl className={styles.facts}><div><dt>Энергия</dt><dd>{selected.energy.toFixed(1)} / 100</dd></div><div><dt>Рассеивание</dt><dd>{selected.dissipationCoefficient.toFixed(2)}</dd></div><div><dt>Стабильность</dt><dd>{selected.stability.toFixed(2)}</dd></div><div><dt>Бонус стабилизации</dt><dd>{Math.round(selected.stabilizationBonus * 100)}%</dd></div></dl></details>
             {selected.lifecycle === 'active' && selected.riskStatus === 'critical' &&
-              <div className={styles.critical} role="alert"><strong>Критический риск · {Math.round(portalRisk(selected, gameBalance) * 100)}%</strong><p>Расчётное время жизни упало ниже 20% начального. Энергия: {selected.energy.toFixed(1)}; рассеивание: {selected.dissipationCoefficient.toFixed(2)}; стабильность: {selected.stability.toFixed(2)}. Отправка запрещена. Сотрудников в мире: {inWorld.length}.</p></div>}
-            {selected.lifecycle === 'active' && <div className={styles.actions}>
-              <h3>Экспедиция</h3>
+              <div className={styles.critical} role="alert"><strong>Критический риск · {Math.round(portalRisk(selected, gameBalance) * 100)}%</strong><p>Оставшееся расчётное время жизни не больше 20% начального. Отправка запрещена; возвращение зависит от запаса энергии. Сотрудников в мире: {inWorld.length}.</p></div>}
+            {selected.lifecycle === 'active' && <div className={styles.actions}><section className={styles.actionPanel} aria-labelledby="expedition-heading">
+              <h3 id="expedition-heading">Экспедиция</h3>
               <label htmlFor="group-size">Размер группы</label>
               <select id="group-size" value={Math.min(groupSize, Math.max(1, available.length))} onChange={(event) => setGroupSize(Number(event.target.value))} disabled={!active || available.length === 0}>{Array.from({ length: Math.min(gameBalance.maxExpeditionSize, Math.max(1, available.length)) }, (_, index) => index + 1).map((count) => <option key={count} value={count}>{count}</option>)}</select>
-              <p>Цена отправки: {transitCost(selected, selectedCount, gameBalance).toFixed(1)} энергии. После перехода: {afterTransit.toFixed(1)}. {afterTransit === 0 && selectedCount > 0 ? reserve ? `Резерв: ${reserve.name}.` : 'Надёжного резервного портала нет.' : `Оценка жизни после перехода: ${duration(remainingLifetime({ ...selected, energy: afterTransit }, gameBalance))}.`}</p>
+              <p className={styles.actionNote}>Цена: {transitCost(selected, selectedCount, gameBalance).toFixed(1)} энергии · остаток: {afterTransit.toFixed(1)}. {afterTransit === 0 && selectedCount > 0 ? reserve ? `Резерв: ${reserve.name}.` : 'Надёжного резервного портала нет.' : `Жизнь после перехода: ${duration(remainingLifetime({ ...selected, energy: afterTransit }, gameBalance))}.`}</p>
               <button className={styles.primary} onClick={send} disabled={!canSend} aria-describedby={availability?.send ? 'send-reason' : undefined}>Отправить сотрудников</button>
               {availability?.send && <p id="send-reason" role={world.researchStatus === 'explored' ? 'alert' : undefined} className={styles.reason}>{availability.send}</p>}
-              <button onClick={returnGroup} disabled={availability?.returnGroup !== null} aria-describedby={availability?.returnGroup ? 'return-reason' : undefined}>Вернуть всех ({inWorld.length}){selected.riskStatus === 'critical' ? ' · аварийно' : ''}</button>
+              {returnCapacity > 0 && <><label htmlFor="return-count">Количество для возврата</label><select id="return-count" value={selectedReturnCount} onChange={(event) => setReturnCount(Number(event.target.value))}>{Array.from({ length: returnCapacity }, (_, index) => index + 1).map((count) => <option key={count} value={count}>{count}</option>)}</select></>}
+              <button onClick={returnGroup} disabled={availability?.returnGroup !== null} aria-describedby={availability?.returnGroup ? 'return-reason' : undefined}>Вернуть сотрудников ({selectedReturnCount})</button>
               {availability?.returnGroup && <p id="return-reason" className={styles.reason}>{availability.returnGroup}</p>}
-              <h3>Управление порталом</h3>
+              {inWorld.length > returnCapacity && <p className={styles.actionNote}>{returnCapacity > 0 ? `Энергии хватит на ${returnCapacity} из ${inWorld.length}. Остальные останутся в мире.` : 'Через этот портал вернуть сотрудников нельзя.'} {returnAlternative ? `Другой маршрут: ${returnAlternative.name}.` : 'Ожидайте новый подходящий портал.'}</p>}
+              {returnAlternative && <button onClick={() => {
+                if (!portalMatchesFilter(returnAlternative, state.portalFilter)) dispatch({ type: 'setFilter', filter: 'all' });
+                dispatch({ type: 'selectPortal', portalId: returnAlternative.id });
+              }}>Выбрать маршрут: {returnAlternative.name}</button>}
+              </section><section className={styles.actionPanel} aria-labelledby="channel-heading"><h3 id="channel-heading">Управление порталом</h3>
               <p>Стабилизация: шанс {Math.round(stabilizationChance(selected, Boolean(observer), gameBalance) * 100)}%. Осталось попыток: {gameBalance.stabilizationAttempts - state.cycle.stabilizationAttemptsUsed}.</p>
               <button onClick={() => dispatch({ type: 'stabilizePortal', portalId: selected.id })} disabled={availability?.stabilize !== null} aria-describedby={availability?.stabilize ? 'stabilize-reason' : undefined}>Стабилизировать</button>
               {availability?.stabilize && <p id="stabilize-reason" className={styles.reason}>{availability.stabilize}</p>}
@@ -159,7 +166,7 @@ export function App() {
               {availability?.observe && <p id="observe-reason" className={styles.reason}>{availability.observe}</p>}
               <button onClick={close} disabled={availability?.close !== null} aria-describedby={availability?.close ? 'close-reason' : undefined}>Закрыть портал</button>
               {availability?.close && <p id="close-reason" className={styles.reason}>{availability.close}</p>}
-            </div>}
+            </section></div>}
             {selected.lifecycle === 'collapsed' && <><button ref={collapsedActionRef} onClick={close} disabled={availability?.close !== null} aria-describedby={availability?.close ? 'close-reason' : undefined}>Закрыть схлопнувшийся портал</button>{availability?.close && <p id="close-reason" className={styles.reason}>{availability.close}</p>}</>}
             {selected.lifecycle === 'closed' && <p className={styles.hint}>Портал закрыт. Действия недоступны.</p>}
 </> : <p className={styles.empty}>Выберите портал, чтобы увидеть риск, прогноз перехода и доступные действия.</p>}</section>
