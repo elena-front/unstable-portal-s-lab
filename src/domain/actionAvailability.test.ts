@@ -13,6 +13,12 @@ import { portalRisk } from './portalPhysics';
 const scenarios: ReviewScenario[] = ['normal', 'dangerous', 'critical', 'critical-reserve', 'closed', 'isolated', 'limit', 'limit-explored', 'exhausted', 'no-reserve', 'reserve', 'observer', 'success', 'failure', 'observer-success', 'observer-failure', 'explored', 'finished'];
 
 describe('проверочные сценарии и причины действий', () => {
+  it('показывает стабилизацию для единственного стабильного маршрута', () => {
+    const single = domainState();
+    expect(actionAvailability(single, single.portals[0]!, 1, gameBalance).stabilize).toBeNull();
+    const duplicate = domainState({ portals: [portal(), portal({ id: 'second' })] });
+    expect(actionAvailability(duplicate, duplicate.portals[0]!, 1, gameBalance).stabilize).toContain('единственному');
+  });
   it('создаёт воспроизводимые состояния для проверки', () => {
     for (const name of scenarios) {
       expect(createReviewScenario(name)).toEqual(createReviewScenario(name));

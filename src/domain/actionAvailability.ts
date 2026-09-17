@@ -1,7 +1,7 @@
 import type { GameBalanceConfig } from '../config/gameBalance';
 import { energyAfterTransit, findReliableReserve } from './expeditions';
 import { estimatedResearchSeconds } from './research';
-import { employeesInWorld, isImportantPortal, isVeryImportantPortal } from './selectors';
+import { employeesInWorld, isStabilizationEligible, isVeryImportantPortal } from './selectors';
 import type { DomainState, Portal } from './types';
 
 export interface ActionAvailability {
@@ -40,8 +40,7 @@ export function actionAvailability(
     returnGroup: unavailable ?? notActive ??
       (inWorld === 0 ? 'В этом мире нет сотрудников для возвращения.' : null),
     stabilize: unavailable ?? notActive ??
-      (portal.riskStatus === 'stable' ? 'Стабилизация доступна только опасному или критичному порталу.' : null) ??
-      (!isImportantPortal(state, portal) ? 'В мире нет сотрудников либо есть безопасный альтернативный маршрут.' : null) ??
+      (!isStabilizationEligible(state, portal) ? 'Стабилизация доступна единственному стабильному маршруту или важному опасному/критичному порталу.' : null) ??
       (portal.stabilizationBonus >= config.maxStabilizationBonus ? 'Достигнут максимальный бонус стабилизации.' : null) ??
       (state.cycle.stabilizationAttemptsUsed >= config.stabilizationAttempts ? 'Попытки стабилизации закончились.' : null),
     observe: unavailable ?? notActive ??

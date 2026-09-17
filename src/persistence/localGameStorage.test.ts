@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { loadAppState, saveAppState, GAME_STORAGE_KEY, HISTORY_STORAGE_KEY } from './localGameStorage';
-import { createAppState } from '../state/portalReducer';
+import { createAppState, createPortalReducer } from '../state/portalReducer';
 import { domainState, testConfig, testDependencies } from '../test/domainFixtures';
 import { finishGame } from '../domain/gameCycle';
+import { createWorlds } from '../domain/gameFactory';
 
 function memoryStorage() {
   const entries = new Map<string, string>();
@@ -29,6 +30,18 @@ describe('версионированное локальное сохранени
     expect(loaded.selectedPortalId).toBe('portal-1');
     expect(loaded.portalFilter).toBe('dangerous');
     expect(loaded.storageWarning).toBeNull();
+  });
+
+  it('продолжает сохранённую партию с шестью мирами, но создаёт восемь в новой', () => {
+    const storage = memoryStorage();
+    const oldWorlds = createWorlds(dependencies, testConfig({ worldsCount: 6 }));
+    const oldGame = createAppState(domainState({ worlds: oldWorlds }));
+    saveAppState(storage, oldGame);
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.storageWarning).toBeNull();
+    expect(loaded.worlds).toHaveLength(6);
+    const restarted = createPortalReducer(dependencies, config)(loaded, { type: 'newGame' });
+    expect(restarted.worlds).toHaveLength(8);
   });
 
   it('восстанавливает историю независимо от повреждённой партии', () => {

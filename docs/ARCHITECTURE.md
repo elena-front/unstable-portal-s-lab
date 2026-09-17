@@ -128,7 +128,7 @@ Portal
 ```text
 GameBalanceConfig
 ├── cycleDurationSeconds: 600
-├── worldsCount: 6
+├── worldsCount: 8
 ├── initialEmployees: 12
 ├── maxExpeditionSize: 4
 ├── maxUnclosedPortals: 20
@@ -136,6 +136,7 @@ GameBalanceConfig
 ├── researchRequiredRange: [90, 150]
 ├── firstPortalDelayRange: [3, 10]
 ├── nextPortalDelayRange: [15, 30]
+├── earlyClosureDelaySeconds: 5
 ├── hiddenWorldProbability: 0.65
 ├── knownWorldStreakLimit: 2
 ├── reliableReserveSeconds: 60
@@ -305,7 +306,8 @@ veryImportant = employeesInWorld > 0 && activeToWorld.length == 1
 ```
 
 `stabilize` доступен важному порталу с `lifecycle = active` и `riskStatus`
-`dangerous` или `critical`, если `stabilizationBonus < 0.75`.
+`dangerous` или `critical`, а также единственному работающему порталу в мир со
+статусом `stable`, если `stabilizationBonus < 0.75`.
 Reducer хранит число использованных попыток; лимит — три на весь
 10-минутный цикл без восстановления. Проверка доступности выполняется до
 расходования попытки.

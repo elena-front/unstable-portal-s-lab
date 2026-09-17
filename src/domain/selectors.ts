@@ -43,6 +43,15 @@ export function isVeryImportantPortal(state: DomainState, portal: Portal): boole
   );
 }
 
+export function isStabilizationEligible(state: DomainState, portal: Portal): boolean {
+  if (portal.lifecycle !== 'active') return false;
+  if (portal.riskStatus === 'stable') {
+    const routes = activePortalsToWorld(state, portal.destinationWorldId);
+    return routes.length === 1 && routes[0]?.id === portal.id;
+  }
+  return isImportantPortal(state, portal);
+}
+
 export function recommendationForPortal(portal: Portal): string {
   if (portal.lifecycle === 'collapsed') {
     return 'Закройте схлопнувшийся портал, чтобы освободить место.';

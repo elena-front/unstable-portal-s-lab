@@ -14,6 +14,19 @@ const PORTAL_NAMES = [
   'Северный проход',
 ] as const;
 
+export function accelerateAfterEarlyClosure(state: DomainState, config: GameBalanceConfig): DomainState {
+  return {
+    ...state,
+    cycle: {
+      ...state.cycle,
+      nextPortalInSeconds: Math.min(
+        state.cycle.nextPortalInSeconds,
+        Math.max(0, config.earlyClosureDelaySeconds),
+      ),
+    },
+  };
+}
+
 function chooseDestination(
   state: DomainState,
   dependencies: DomainDependencies,

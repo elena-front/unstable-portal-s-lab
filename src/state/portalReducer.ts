@@ -15,11 +15,18 @@ import type {
   DomainResult,
   DomainState,
   GameResult,
+  Portal,
 } from '../domain/types';
 import type { ReviewScenario } from '../domain/demoScenario';
 
 export type PortalFilter = 'all' | 'stable' | 'dangerous' | 'critical' | 'collapsed' | 'closed';
 export type ActiveView = 'portals' | 'events' | 'results' | 'worklog';
+
+export function portalMatchesFilter(portal: Portal, filter: PortalFilter): boolean {
+  if (filter === 'all') return portal.lifecycle !== 'closed';
+  if (filter === 'closed' || filter === 'collapsed') return portal.lifecycle === filter;
+  return portal.lifecycle === 'active' && portal.riskStatus === filter;
+}
 
 export interface Notification {
   kind: 'info' | 'success' | 'error';
@@ -81,9 +88,13 @@ function appendResultOnce(history: GameResult[], result: GameResult): GameResult
 
 function domainResultToState(state: AppState, result: DomainResult): AppState {
   const lastEvent = result.value.events.at(-1);
+  const selectedPortalId = state.selectedPortalId && result.value.portals.some(
+    (portal) => portal.id === state.selectedPortalId && portalMatchesFilter(portal, state.portalFilter),
+  ) ? state.selectedPortalId : null;
   return {
     ...state,
     ...result.value,
+    selectedPortalId,
     notification: {
       kind: result.ok ? 'success' : 'error',
       message: lastEvent?.message ?? (result.ok ? 'Действие выполнено.' : result.reason),
@@ -120,6 +131,9 @@ export function createPortalReducer(
         return {
           ...state,
           ...next,
+          selectedPortalId: state.selectedPortalId && next.portals.some(
+            (portal) => portal.id === state.selectedPortalId && portalMatchesFilter(portal, state.portalFilter),
+          ) ? state.selectedPortalId : null,
           resultHistory: result
             ? appendResultOnce(state.resultHistory, result)
             : state.resultHistory,
@@ -138,12 +152,9 @@ export function createPortalReducer(
         return {
           ...state,
           portalFilter: action.filter,
-          selectedPortalId: state.portals.some((portal) => portal.id === state.selectedPortalId && (
-            action.filter === 'all' ? portal.lifecycle === 'active' :
-            action.filter === 'closed' || action.filter === 'collapsed'
-              ? portal.lifecycle === action.filter
-              : portal.lifecycle === 'active' && portal.riskStatus === action.filter
-          )) ? state.selectedPortalId : null,
+          selectedPortalId: state.portals.some((portal) =>
+            portal.id === state.selectedPortalId && portalMatchesFilter(portal, action.filter)
+          ) ? state.selectedPortalId : null,
         };
       case 'setView':
         return { ...state, activeView: action.view };
@@ -186,8 +197,7 @@ export function createPortalReducer(
         );
       case 'closePortal': {
         const result = closePortal(state, action.portalId, action.confirmed, dependencies, config);
-        const next = domainResultToState(state, result);
-        return result.ok ? { ...next, portalFilter: 'closed' } : next;
+        return domainResultToState(state, result);
       }
       case 'newGame':
         return { ...resetOperationalState(state, createInitialState(dependencies, config)), awaitingStart: true };

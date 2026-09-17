@@ -15,7 +15,7 @@ import {
 } from '../domain';
 import type { Portal } from '../domain/types';
 import { usePortals } from '../state/PortalContext';
-import type { PortalFilter } from '../state/portalReducer';
+import { portalMatchesFilter, type PortalFilter } from '../state/portalReducer';
 import styles from './App.module.css';
 import { Worklog } from './Worklog';
 import { EventJournal, GameSetup, ResultDialog, ResultsTable } from './GameViews';
@@ -45,6 +45,8 @@ export function App() {
   const [dismissedResultId, setDismissedResultId] = useState<string | null>(null);
   const collapsedActionRef = useRef<HTMLButtonElement>(null);
   const selectedRowRef = useRef<HTMLButtonElement>(null);
+  const currentFilterRef = useRef<HTMLButtonElement>(null);
+  const previousSelectionRef = useRef<string | null>(state.selectedPortalId);
   const resultsTabRef = useRef<HTMLButtonElement>(null);
   const selected = state.portals.find((portal) => portal.id === state.selectedPortalId) ?? null;
   const world = selected ? state.worlds.find((item) => item.id === selected.destinationWorldId) : null;
@@ -52,12 +54,9 @@ export function App() {
   const available = state.employees.filter((employee) => employee.location === 'lab');
   const active = state.cycle.status !== 'finished';
   const visible = state.portals
-    .filter((portal) => state.portalFilter === 'all' ? portal.lifecycle === 'active' :
-      state.portalFilter === 'collapsed' || state.portalFilter === 'closed'
-        ? portal.lifecycle === state.portalFilter
-        : portal.lifecycle === 'active' && portal.riskStatus === state.portalFilter)
+    .filter((portal) => portalMatchesFilter(portal, state.portalFilter))
     .sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, 'ru'));
-  const openCount = state.portals.filter((portal) => portal.lifecycle === 'active').length;
+  const openCount = state.portals.filter((portal) => portal.lifecycle !== 'closed').length;
   const criticalCount = state.portals.filter((portal) => portal.lifecycle === 'active' && portal.riskStatus === 'critical').length;
   const closedCount = state.portals.filter((portal) => portal.lifecycle === 'closed').length;
   const attentionCount = state.portals.filter((portal) => portal.lifecycle === 'collapsed' || (portal.lifecycle === 'active' && portal.riskStatus !== 'stable')).length;
@@ -72,6 +71,12 @@ export function App() {
   const canSend = availability?.send === null;
 
   useEffect(() => { setGroupSize(1); }, [selected?.id]);
+  useEffect(() => {
+    if (previousSelectionRef.current && !state.selectedPortalId && document.activeElement === document.body) {
+      currentFilterRef.current?.focus();
+    }
+    previousSelectionRef.current = state.selectedPortalId;
+  }, [state.selectedPortalId, state.portalFilter]);
   useEffect(() => {
     if (document.activeElement !== document.body) return;
     if (selected?.lifecycle === 'collapsed') collapsedActionRef.current?.focus();
@@ -124,11 +129,11 @@ export function App() {
         {state.storageWarning && <p role="alert" className={styles.alert}>{state.storageWarning} Для проверки можно загрузить демосценарий ниже.</p>}
         {state.notification && <div role="status" className={styles.notice}><span>{state.notification.message}</span><button onClick={() => dispatch({ type: 'dismissNotification' })} aria-label="Закрыть уведомление">×</button></div>}
         <section className={styles.metrics} aria-label="Сводка порталов">
-          <div><span>Открытые</span><strong>{openCount}</strong></div><div><span>Критические</span><strong>{criticalCount}</strong></div><div><span>Закрытые</span><strong>{closedCount}</strong></div><div><span>Требуют внимания</span><strong>{attentionCount}</strong></div>
+          <div><span>Незакрытые</span><strong>{openCount}</strong></div><div><span>Критические</span><strong>{criticalCount}</strong></div><div><span>Закрытые</span><strong>{closedCount}</strong></div><div><span>Требуют внимания</span><strong>{attentionCount}</strong></div>
         </section>
         <section className={styles.worldSection} aria-labelledby="worlds-title"><div className={styles.sectionHeading}><h2 id="worlds-title">Миры</h2><span>{exploredCount} / {state.worlds.length} исследовано</span></div><div className={styles.worldGrid}>{state.worlds.map((item) => <div key={item.id} className={styles.world}><div><strong>{item.visibility === 'hidden' ? 'Неизвестный мир' : item.name}</strong><span>{item.visibility === 'hidden' ? 'Скрыт' : researchNames[item.researchStatus]}</span></div><progress aria-label={`Прогресс мира ${item.visibility === 'hidden' ? 'неизвестный' : item.name}`} value={item.researchProgress} max={item.researchRequired} /><small>{item.visibility === 'hidden' ? 'Ожидает открытия' : `${Math.floor(100 * item.researchProgress / item.researchRequired)}% · сотрудников: ${employeesInWorld(state, item.id).length}`}</small></div>)}</div></section>
         <div className={styles.sectionHeading}><h2>Порталы</h2><span>{visible.length} в списке</span></div>
-        <div className={styles.filters} aria-label="Фильтр порталов">{(Object.keys(filterNames) as PortalFilter[]).map((filter) => <button key={filter} aria-pressed={state.portalFilter === filter} onClick={() => dispatch({ type: 'setFilter', filter })}>{filterNames[filter]}</button>)}</div>
+        <div className={styles.filters} aria-label="Фильтр порталов">{(Object.keys(filterNames) as PortalFilter[]).map((filter) => <button key={filter} ref={state.portalFilter === filter ? currentFilterRef : undefined} aria-pressed={state.portalFilter === filter} onClick={() => dispatch({ type: 'setFilter', filter })}>{filterNames[filter]}</button>)}</div>
         <div className={styles.mainGrid}>
           <section className={styles.list} aria-label="Список порталов">{visible.length === 0 ? <div className={styles.empty}><p>{state.portals.length === 0 ? `Порталов пока нет. Первый откроется через ${duration(state.cycle.nextPortalInSeconds)}.` : 'По выбранному фильтру порталов нет.'}</p></div> : visible.map((portal) => {
             const destination = state.worlds.find((item) => item.id === portal.destinationWorldId);

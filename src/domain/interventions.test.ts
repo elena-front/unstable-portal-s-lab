@@ -26,6 +26,18 @@ describe('стабилизация и наблюдатель', () => {
     });
   }
 
+  it('разрешает стабилизацию единственного стабильного маршрута без сотрудников', () => {
+    const single = domainState({ portals: [portal({ riskStatus: 'stable' })] });
+    const result = stabilizePortal(single, 'portal-1', testDependencies(() => 0), config);
+    expect(result.ok).toBe(true);
+    expect(result.value.cycle.stabilizationAttemptsUsed).toBe(1);
+
+    const duplicate = domainState({ portals: [portal(), portal({ id: 'second' })] });
+    const blocked = stabilizePortal(duplicate, 'portal-1', testDependencies(() => 0), config);
+    expect(blocked.ok).toBe(false);
+    expect(blocked.value.cycle.stabilizationAttemptsUsed).toBe(0);
+  });
+
   it('повышает шанс опасного портала наблюдателем', () => {
     const route = importantState().portals[0]!;
     expect(stabilizationChance(route, true, config)).toBeGreaterThan(
@@ -137,11 +149,30 @@ describe('закрытие порталов', () => {
 
   it('закрывает collapsed без дополнительных условий', () => {
     const state = domainState({
+      cycle: { ...domainState().cycle, nextPortalInSeconds: 20 },
       portals: [portal({ lifecycle: 'collapsed', energy: 0 })],
     });
     const result = closePortal(state, 'portal-1', false, dependencies, config);
     expect(result.ok).toBe(true);
     expect(result.value.portals[0]?.closedReason).toBe('collapsed-cleared');
+    expect(result.value.cycle.nextPortalInSeconds).toBe(20);
+  });
+
+  it('ускоряет появление после досрочного закрытия, не удлиняя короткий таймер', () => {
+    const base = domainState({
+      worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],
+      cycle: { ...domainState().cycle, nextPortalInSeconds: 20 },
+    });
+    const result = closePortal(base, 'portal-1', false, dependencies, config);
+    expect(result.ok).toBe(true);
+    expect(result.value.cycle.nextPortalInSeconds).toBe(config.earlyClosureDelaySeconds);
+    const beforeOpening = tickGame(result.value, 4, dependencies, config);
+    expect(beforeOpening.portals).toHaveLength(1);
+    const afterOpening = tickGame(beforeOpening, 1, dependencies, config);
+    expect(afterOpening.portals).toHaveLength(2);
+    const sooner = closePortal({ ...base, cycle: { ...base.cycle, nextPortalInSeconds: 2 } },
+      'portal-1', false, dependencies, config);
+    expect(sooner.value.cycle.nextPortalInSeconds).toBe(2);
   });
 
   it('разрешает ручное закрытие активного портала только в исследованный мир', () => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { gameBalance } from '../config/gameBalance';
 import { missionSummary } from '../domain/gameCycle';
 import type { ReviewScenario } from '../domain/demoScenario';
 import type { GameEvent, GameResult } from '../domain/types';
@@ -41,7 +42,7 @@ export function GameSetup({ onStart, storageWarning }: {
     {storageWarning && <p role="alert">{storageWarning} Начните новую партию.</p>}
     <p className={styles.eyebrow}>Перед началом партии</p>
     <h2 ref={titleRef} tabIndex={-1}>Откройте миры. Верните команду.</h2>
-    <p>Нестабильные порталы появились в лаборатории. За десять минут исследуйте шесть неизвестных миров и верните сотрудников до закрытия смены.</p>
+    <p>За десять минут исследуйте {gameBalance.worldsCount} неизвестных миров и верните сотрудников до закрытия смены.</p>
     <h3>Краткие правила</h3>
     <ol>
       <li>Порталы появляются случайно. Выберите безопасный маршрут и отправьте от одного до четырёх сотрудников.</li>
@@ -49,11 +50,11 @@ export function GameSetup({ onStart, storageWarning }: {
       <li>Возвращайте команду вручную. Критичный портал опасен; для него доступна только аварийная эвакуация.</li>
       <li>Миссия выполнена, если исследованы все миры. Очки — процент сотрудников, вернувшихся в лабораторию.</li>
     </ol>
-    <label htmlFor="game-scenario">Сценарий партии</label>
+    <label htmlFor="game-scenario">Режим запуска</label>
     <select id="game-scenario" value={scenario} onChange={(event) => setScenario(event.target.value as ReviewScenario)}>
       {scenarios.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
     </select>
-    <p className={styles.hint}>Проверочные сценарии показывают отдельные ситуации и могут начинаться не с нулевой минуты.</p>
+    <p className={styles.hint}>«Обычная партия» начинает игру с нуля. Остальные варианты — готовые ситуации для проверки отдельных правил; они могут начинаться с открытыми порталами и уже прошедшим временем.</p>
     <button className={styles.primary} onClick={() => onStart(scenario)}>Начать партию</button>
   </main>;
 }

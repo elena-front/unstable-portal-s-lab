@@ -6,6 +6,7 @@ import { missionSummary, tickGame } from './gameCycle';
 import {
   domainState,
   employee,
+  portal,
   testConfig,
   testDependencies,
   world,
@@ -19,7 +20,7 @@ describe('игровой цикл', () => {
     expect(missionSummary(base)).toEqual({ completed: true, score: 75 });
     expect(missionSummary({ ...base, exploredWorlds: 5 })).toEqual({ completed: false, score: 75 });
   });
-  it('создаёт шесть миров, двенадцать сотрудников и использует внедрённый баланс', () => {
+  it('создаёт миры и сотрудников по внедрённому балансу', () => {
     const state = createInitialState(
       testDependencies(() => 0),
       testConfig({
@@ -35,10 +36,20 @@ describe('игровой цикл', () => {
     expect(state.cycle.nextPortalInSeconds).toBe(2);
   });
 
-  it('создаёт повторяемый демонстрационный сценарий с шестью мирами', () => {
+  it('ускоряет новый портал после автоматического досрочного закрытия', () => {
+    const state = domainState({
+      cycle: { ...domainState().cycle, nextPortalInSeconds: 20 },
+      portals: [portal({ wasCritical: true, riskStatus: 'critical', energy: 50 })],
+    });
+    const next = tickGame(state, 1, testDependencies(), testConfig());
+    expect(next.portals[0]?.lifecycle).toBe('closed');
+    expect(next.cycle.nextPortalInSeconds).toBe(5);
+  });
+
+  it('создаёт повторяемый демонстрационный сценарий с восемью мирами', () => {
     const first = createDemoScenario();
     expect(first).toEqual(createDemoScenario());
-    expect(first.worlds).toHaveLength(6);
+    expect(first.worlds).toHaveLength(8);
     expect(first.employees).toHaveLength(12);
     expect(first.portals.length).toBeGreaterThan(0);
   });

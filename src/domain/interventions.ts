@@ -5,11 +5,12 @@ import {
   findReliableReserve,
 } from './expeditions';
 import { releaseInvalidObservers } from './observerRules';
+import { accelerateAfterEarlyClosure } from './portalDirector';
 import { portalRisk, remainingLifetime, synchronizePortal } from './portalPhysics';
 import { clamp, randomFloat } from './random';
 import {
   employeesInWorld,
-  isImportantPortal,
+  isStabilizationEligible,
   isVeryImportantPortal,
 } from './selectors';
 import type {
@@ -71,11 +72,8 @@ export function stabilizePortal(
   if (!portal || portal.lifecycle !== 'active') {
     return rejected(state, dependencies, 'stabilization', 'Портал недоступен.');
   }
-  if (!['dangerous', 'critical'].includes(portal.riskStatus)) {
-    return rejected(state, dependencies, 'stabilization', 'Стабилизация доступна только опасному или критичному порталу.');
-  }
-  if (!isImportantPortal(state, portal)) {
-    return rejected(state, dependencies, 'stabilization', 'Портал не является важным.');
+  if (!isStabilizationEligible(state, portal)) {
+    return rejected(state, dependencies, 'stabilization', 'Стабилизация доступна единственному стабильному маршруту или важному опасному/критичному порталу.');
   }
   if (portal.stabilizationBonus >= config.maxStabilizationBonus) {
     return rejected(state, dependencies, 'stabilization', 'Достигнут максимальный бонус стабилизации.');
@@ -238,6 +236,7 @@ export function closePortal(
     ),
   };
   next = releaseObserver(next, portal.id);
+  if (portal.lifecycle === 'active') next = accelerateAfterEarlyClosure(next, config);
   next = appendEvent(next, dependencies, 'portal', 'success', 'Портал закрыт оператором.');
   return { ok: true, value: next };
 }

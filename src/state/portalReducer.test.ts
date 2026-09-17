@@ -112,7 +112,7 @@ describe('Portal reducer', () => {
     const demo = reducer(finished, { type: 'restoreDemo' });
     expect(demo.cycle.status).toBe('running');
     expect(demo.cycle.id).not.toBe(finished.cycle.id);
-    expect(demo.worlds).toHaveLength(6);
+    expect(demo.worlds).toHaveLength(8);
     expect(demo.portals.length).toBeGreaterThan(0);
     expect(demo.resultHistory).toHaveLength(1);
   });
