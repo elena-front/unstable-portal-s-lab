@@ -53,8 +53,11 @@ describe('App', () => {
     expect(screen.getAllByRole('progressbar')).toHaveLength(9);
     fireEvent.click(screen.getByRole('button', { name: 'AI Worklog' }));
     expect(screen.getByRole('heading', { name: 'AI Worklog' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Вклад в работу' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Этапы работы и ключевые запросы' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Решения человека' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Исправления' })).toBeInTheDocument();
+    expect(screen.getByText(/AI ошибочно сделал критичный статус безусловным запретом возврата/)).toBeInTheDocument();
+    expect(screen.getByText(/102 автоматических теста/)).toBeInTheDocument();
     expect(screen.getByText(/статистика токенов недоступна/)).toBeInTheDocument();
   });
 
