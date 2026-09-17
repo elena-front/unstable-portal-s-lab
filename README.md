@@ -62,6 +62,15 @@ npm run preview
 `preview` открывает собранную версию локально. Результаты автоматических и ручных
 проверок находятся в [отчёте этапа 5](docs/TEST_RUN_STAGE5.md).
 
+## Публикация
+
+Приложение предназначено для адреса
+[elena-front.github.io/unstable-portal-s-lab/](https://elena-front.github.io/unstable-portal-s-lab/).
+При отправке изменений в `main` workflow GitHub Actions проверяет типы, запускает
+тесты, собирает приложение и публикует `dist` на GitHub Pages. В настройках
+репозитория **Settings → Pages → Build and deployment → Source** нужно выбрать
+**GitHub Actions**. Состояние публикации видно в разделе **Actions**.
+
 ## Ограничения
 
 Игра работает только в браузере. Текущая партия и история результатов хранятся
