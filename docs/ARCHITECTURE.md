@@ -110,11 +110,11 @@ Portal
 ├── stability               // 0..1
 ├── stabilizationBonus      // 0..0.75
 ├── initialLifetimeSeconds  // number | null
-├── openingGraceSecondsRemaining // optional for old saves
+├── openingGraceSecondsRemaining // legacy field in old saves
 ├── wasCritical
 ├── riskStatus               // stable | dangerous | critical
 ├── lifecycle                // active | closed | collapsed
-└── closedReason             // manual | critical-empty | collapsed-cleared | null
+└── closedReason             // manual | collapsed-cleared | critical-empty (old saves) | null
 ```
 
 Время, случайность и период обновления внедряются в доменный сервис. Компоненты
@@ -135,7 +135,7 @@ GameBalanceConfig
 ├── maxUnclosedPortals: 8
 ├── portalEnergyRange: [0, 100]
 ├── initialPortalRiskRange: [0, 0.95]
-├── newPortalGraceSeconds: 20
+├── newPortalGraceSeconds: 20  // предел проверки старых сохранений
 ├── researchRequiredRange: [90, 150]
 ├── earlyPortalDelayRange: [5, 9]
 ├── earlyPortalCount: 3
@@ -220,8 +220,8 @@ LocalStorage бесконечность не сериализуется; ада�
    случайный скрытый мир;
 4. независимо генерирует энергию, рассеивание, стабильность и начальный риск;
    начальное время жизни вычисляет из текущего и выбранного риска;
-5. задаёт новому порталу 20 секунд до проверки автоматического закрытия
-   `critical-empty` и генерирует новую случайную задержку.
+5. генерирует новую случайную задержку; критичный портал остаётся открытым до
+   исчерпания энергии или ручного закрытия.
 
 Источник случайности внедряется. Защита от серии относится к выбору назначения,
 а не задаёт момент или порядок открытия конкретных миров. Заблокированная
@@ -241,6 +241,8 @@ E_after = max(0, E_before - totalCost)
 `sendResearchers` принимает от 1 до 4 свободных сотрудников и разрешён только
 для активного `stable` или `dangerous` портала. При `E_after > 0` операция
 атомарно уменьшает энергию и меняет `Employee.location`.
+Перед отправкой проверяется, что текущей энергии хватает на полную стоимость
+перехода; наличие резерва не заменяет оплату перехода.
 
 При `E_after = 0` доменный селектор ищет другой портал, удовлетворяющий всем
 условиям:

@@ -86,7 +86,7 @@ describe('проверочный чеклист', () => {
     expect(next.worlds[0]?.researchProgress).toBeCloseTo(10 * Math.sqrt(2));
   });
 
-  it('оставляет критичный портал открытым до ухода последнего сотрудника', () => {
+  it('оставляет критичный портал открытым после ухода последнего сотрудника', () => {
     const state = domainState({
       portals: [portal({ energy: 10, riskStatus: 'critical', wasCritical: true })],
       employees: [employee('field', { location: { worldId: 'world-1' } })],
@@ -95,8 +95,9 @@ describe('проверочный чеклист', () => {
     const occupied = tickGame(state, 1, testDependencies(), testConfig());
     expect(occupied.portals[0]?.lifecycle).toBe('active');
     const empty = { ...occupied, employees: [employee('field')] };
-    const closed = tickGame(empty, 1, testDependencies(), testConfig());
-    expect(closed.portals[0]?.closedReason).toBe('critical-empty');
+    const afterReturn = tickGame(empty, 1, testDependencies(), testConfig());
+    expect(afterReturn.portals[0]?.lifecycle).toBe('active');
+    expect(afterReturn.portals[0]?.closedReason).toBeNull();
   });
 
   it('сохраняет первый результат и добавляет второй после новой партии', () => {

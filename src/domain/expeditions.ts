@@ -138,6 +138,10 @@ export function sendResearchers(
     return rejected(state, dependencies, 'Выбранные сотрудники недоступны в лаборатории.');
   }
 
+  if (portal.energy < transitCost(portal, selected.length, config)) {
+    return rejected(state, dependencies, 'Энергии портала недостаточно для перехода выбранной группы.');
+  }
+
   const energyAfter = energyAfterTransit(portal, selected.length, config);
   if (energyAfter === 0) {
     const world = state.worlds.find((candidate) => candidate.id === portal.destinationWorldId);

@@ -1,5 +1,5 @@
 import type { GameBalanceConfig } from '../config/gameBalance';
-import { energyAfterTransit, findReliableReserve, maxReturnCount } from './expeditions';
+import { energyAfterTransit, findReliableReserve, maxReturnCount, transitCost } from './expeditions';
 import { estimatedResearchSeconds } from './research';
 import { employeesInWorld, isStabilizationEligible, isVeryImportantPortal } from './selectors';
 import type { DomainState, Portal } from './types';
@@ -36,6 +36,7 @@ export function actionAvailability(
       (world?.researchStatus === 'explored' ? 'Мир уже исследован. Новая экспедиция не нужна.' : null) ??
       (groupSize < 1 || groupSize > config.maxExpeditionSize ? `Выберите от 1 до ${config.maxExpeditionSize} сотрудников.` : null) ??
       (free < groupSize ? 'В лаборатории недостаточно сотрудников.' : null) ??
+      (portal.energy < transitCost(portal, groupSize, config) ? 'Энергии портала недостаточно для перехода выбранной группы.' : null) ??
       (after === 0 && !reserve ? 'Переход исчерпает портал; надёжного маршрута возвращения нет.' : null),
     returnGroup: unavailable ?? notActive ??
       (inWorld === 0 ? 'В этом мире нет сотрудников для возвращения.' : null) ??
@@ -52,7 +53,7 @@ export function actionAvailability(
       (energyAfterTransit(portal, 1, config) === 0 ? 'Переход наблюдателя исчерпает портал.' : null),
     close: unavailable ??
       (portal.lifecycle === 'closed' ? 'Портал уже закрыт.' : null) ??
-      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.' : null) ??
+      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && (inWorld > 0 || maxReturnCount(portal, config) > 0) && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.' : null) ??
       (portal.lifecycle === 'active' && inWorld > 0 && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Закрытие оставит сотрудников без надёжного маршрута.' : null),
   };
 }

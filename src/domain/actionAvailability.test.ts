@@ -25,7 +25,7 @@ describe('проверочные сценарии и причины действ
     }
     expect(createReviewScenario('critical').portals[0]?.riskStatus).toBe('critical');
     expect(portalRisk(createReviewScenario('critical').portals[0]!, gameBalance)).toBeGreaterThanOrEqual(.8);
-    expect(createReviewScenario('closed').portals[0]?.closedReason).toBe('critical-empty');
+    expect(createReviewScenario('closed').portals[0]?.closedReason).toBe('manual');
     expect(createReviewScenario('isolated').employees.some((person) => person.location !== 'lab')).toBe(true);
     expect(createReviewScenario('limit').portals).toHaveLength(gameBalance.maxUnclosedPortals);
     expect(createReviewScenario('limit-explored').portals).toHaveLength(gameBalance.maxUnclosedPortals);
@@ -76,6 +76,19 @@ describe('проверочные сценарии и причины действ
     const state = domainState({ portals: [main, reserve] });
     expect(actionAvailability(state, main, 1, gameBalance).close).toBeNull();
     expect(actionAvailability({ ...state, portals: [main] }, main, 1, gameBalance).close).toContain('надёжный маршрут');
+  });
+
+  it('даёт закрыть пустой маршрут, энергии которого не хватает даже на одного', () => {
+    const route = portal({ energy: 3 });
+    const state = domainState({ portals: [route] });
+    const availability = actionAvailability(state, route, 1, gameBalance);
+    expect(availability.send).toContain('Энергии портала недостаточно');
+    expect(availability.close).toBeNull();
+
+    const occupied = domainState({ portals: [route],
+      employees: [employee('field', { location: { worldId: 'world-1' } })] });
+    expect(actionAvailability(occupied, route, 1, gameBalance).close)
+      .toContain('надёжный маршрут');
   });
 
   it('объясняет риск изоляции и исчерпание попыток', () => {

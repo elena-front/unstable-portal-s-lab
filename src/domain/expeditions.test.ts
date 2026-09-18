@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { findBetterReturnPortal, maxReturnCount, returnEmployees, sendResearchers, transitCost } from './expeditions';
 import { advanceResearch } from './research';
+import { tickGame } from './gameCycle';
+import { closePortal } from './interventions';
 import {
   domainState,
   employee,
@@ -41,7 +43,7 @@ describe('экспедиции и исследование', () => {
 
   it('блокирует исчерпывающую отправку без надёжного резерва', () => {
     const result = sendResearchers(
-      domainState({ portals: [portal({ energy: 5 })] }),
+      domainState({ portals: [portal({ energy: 7 })] }),
       'portal-1',
       ['employee-1'],
       dependencies,
@@ -53,7 +55,7 @@ describe('экспедиции и исследование', () => {
   });
 
   it('разрешает исчерпывающую отправку при надёжном стабильном резерве', () => {
-    const selected = portal({ energy: 5 });
+    const selected = portal({ energy: 7 });
     const reserve = portal({
       id: 'reserve',
       energy: 100,
@@ -77,12 +79,38 @@ describe('экспедиции и исследование', () => {
     expect(result.value.employees[0]?.location).toEqual({ worldId: 'world-1' });
   });
 
+  it('не отправляет сотрудника, если энергии не хватает оплатить переход даже с резервом', () => {
+    const selected = portal({ energy: 3 });
+    const reserve = portal({ id: 'reserve', energy: 100,
+      dissipationCoefficient: 0, stability: 1, initialLifetimeSeconds: null });
+    const state = domainState({ portals: [selected, reserve] });
+    const result = sendResearchers(state, selected.id, ['employee-1'], dependencies, config);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('Энергии портала недостаточно');
+    expect(result.value.employees[0]?.location).toBe('lab');
+  });
+
+  it('после аварийного возврата сохраняет схлопнувшийся канал до ручного закрытия', () => {
+    const route = portal({ energy: 7, riskStatus: 'critical', wasCritical: true });
+    const state = domainState({ portals: [route],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+      cycle: { ...domainState().cycle, nextPortalInSeconds: 100 } });
+    const returned = returnEmployees(state, route.id, ['field'], dependencies, config);
+    expect(returned.ok).toBe(true);
+    expect(returned.value.portals[0]?.lifecycle).toBe('collapsed');
+    const later = tickGame(returned.value, 2, dependencies, config);
+    expect(later.portals[0]?.lifecycle).toBe('collapsed');
+    const closed = closePortal(later, route.id, false, dependencies, config);
+    expect(closed.ok).toBe(true);
+    expect(closed.value.portals[0]?.closedReason).toBe('collapsed-cleared');
+  });
+
   it('отклоняет опасный резерв, даже если его энергии достаточно', () => {
     const result = sendResearchers(
       domainState({
         worlds: [world({ researchRequired: 1 })],
         portals: [
-          portal({ energy: 5 }),
+          portal({ energy: 7 }),
           portal({ id: 'reserve', riskStatus: 'dangerous', energy: 100 }),
         ],
       }),

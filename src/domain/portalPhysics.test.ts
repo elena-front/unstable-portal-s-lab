@@ -24,15 +24,17 @@ describe('физика портала', () => {
     expect(portalRisk(portal({ energy: 0 }), config)).toBe(1);
   });
 
-  it('оставляет новый критичный портал видимым на время реакции', () => {
+  it('не закрывает критичный пустой портал автоматически и сохраняет схлопнувшийся', () => {
     const opened = portal({ riskStatus: 'critical', wasCritical: true,
-      initialLifetimeSeconds: 5000, openingGraceSecondsRemaining: 20 });
+      initialLifetimeSeconds: 5000 });
     const beforeTimeout = evolvePortal(opened, 19, 0, () => 0.5, config);
     expect(beforeTimeout.lifecycle).toBe('active');
-    expect(beforeTimeout.openingGraceSecondsRemaining).toBe(1);
     const expired = evolvePortal(beforeTimeout, 1, 0, () => 0.5, config);
-    expect(expired.lifecycle).toBe('closed');
-    expect(expired.closedReason).toBe('critical-empty');
+    expect(expired.lifecycle).toBe('active');
+    expect(expired.closedReason).toBeNull();
+    const collapsed = evolvePortal({ ...expired, energy: 0.01 }, 1, 0, () => 0.5, config);
+    expect(collapsed.lifecycle).toBe('collapsed');
+    expect(evolvePortal(collapsed, 30, 0, () => 0.5, config).lifecycle).toBe('collapsed');
   });
 
   it('безопасно обрабатывает нулевое рассеивание и откладывает T_initial', () => {

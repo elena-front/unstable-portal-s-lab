@@ -50,7 +50,7 @@ export function riskStatusFromRisk(
 
 export function synchronizePortal(
   portal: Portal,
-  employeeCount: number,
+  _employeeCount: number,
   config: GameBalanceConfig,
 ): Portal {
   if (portal.lifecycle !== 'active') return portal;
@@ -67,18 +67,7 @@ export function synchronizePortal(
       : portal.initialLifetimeSeconds;
   const initialized = { ...withEnergy, initialLifetimeSeconds };
   const riskStatus = riskStatusFromRisk(portalRisk(initialized, config), config);
-  const wasCritical = portal.wasCritical || riskStatus === 'critical';
-
-  if (wasCritical && employeeCount === 0 && (portal.openingGraceSecondsRemaining ?? 0) <= 0) {
-    return {
-      ...initialized,
-      wasCritical,
-      riskStatus,
-      lifecycle: 'closed',
-      closedReason: 'critical-empty',
-    };
-  }
-  return { ...initialized, wasCritical, riskStatus };
+  return { ...initialized, wasCritical: portal.wasCritical || riskStatus === 'critical', riskStatus };
 }
 
 export function evolvePortal(
@@ -118,9 +107,6 @@ export function evolvePortal(
       ...next,
       energy: Math.max(0, next.energy - consumed),
       coefficientAgeSeconds: next.coefficientAgeSeconds + step,
-      openingGraceSecondsRemaining: next.openingGraceSecondsRemaining === undefined
-        ? undefined
-        : Math.max(0, next.openingGraceSecondsRemaining - step),
     };
     remainingDelta -= step;
     next = synchronizePortal(next, employeeCount, config);

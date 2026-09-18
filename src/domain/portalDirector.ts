@@ -65,7 +65,6 @@ function createPortal(
     stabilizationBonus: 0,
     initialLifetimeSeconds: null,
     coefficientAgeSeconds: 0,
-    openingGraceSecondsRemaining: config.newPortalGraceSeconds,
     wasCritical: false,
     riskStatus: 'stable',
     lifecycle: 'active',

@@ -3,6 +3,7 @@ import { appendEvent } from './events';
 import {
   energyAfterTransit,
   findReliableReserve,
+  maxReturnCount,
 } from './expeditions';
 import { releaseInvalidObservers } from './observerRules';
 import { accelerateAfterEarlyClosure } from './portalDirector';
@@ -210,7 +211,7 @@ export function closePortal(
     if (!world) return rejected(state, dependencies, 'portal', 'Мир назначения не найден.');
     const count = employeesInWorld(state, world.id).length;
     const reserve = findReliableReserve(state, portal, count, 0, config);
-    if (world.researchStatus !== 'explored' && !reserve) {
+    if (world.researchStatus !== 'explored' && (count > 0 || maxReturnCount(portal, config) > 0) && !reserve) {
       return rejected(state, dependencies, 'portal', 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.');
     }
     if (count > 0) {

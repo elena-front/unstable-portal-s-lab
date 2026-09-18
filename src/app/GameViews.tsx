@@ -11,7 +11,7 @@ const scenarios: { value: ReviewScenario; label: string }[] = [
   { value: 'dangerous', label: 'Опасный портал' },
   { value: 'critical', label: 'Критичный портал: возврат по запасу энергии' },
   { value: 'critical-reserve', label: 'Критичный портал с маршрутом возврата' },
-  { value: 'closed', label: 'Автоматически закрытый портал' },
+  { value: 'closed', label: 'Закрытый оператором портал' },
   { value: 'isolated', label: 'Схлопнувшийся портал и изоляция' },
   { value: 'limit', label: 'Лимит 8 порталов' },
   { value: 'limit-explored', label: 'Лимит и исследованный мир' },

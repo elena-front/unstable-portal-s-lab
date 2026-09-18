@@ -57,7 +57,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Решения человека' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Исправления' })).toBeInTheDocument();
     expect(screen.getByText(/AI ошибочно сделал критичный статус безусловным запретом возврата/)).toBeInTheDocument();
-    expect(screen.getByText(/102 автоматических теста/)).toBeInTheDocument();
+    expect(screen.getByText(/прошли автоматические тесты/)).toBeInTheDocument();
     expect(screen.getByText(/статистика токенов недоступна/)).toBeInTheDocument();
   });
 
@@ -72,6 +72,21 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Вернуть сотрудников (2)' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Вернуть сотрудников (2)' }));
     expect(screen.getByText('В лаборатории: 2 из 2')).toBeInTheDocument();
+  });
+
+  it('позволяет оператору закрыть пустой канал без энергии для экспедиции', () => {
+    const initial = createAppState(domainState({ portals: [portal({ energy: 3 })] }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    const detail = screen.getByRole('region', { name: 'Детали портала' });
+    expect(within(detail).getByRole('button', { name: 'Отправить сотрудников' })).toBeDisabled();
+    const close = within(detail).getByRole('button', { name: 'Закрыть портал' });
+    expect(close).toBeEnabled();
+    fireEvent.click(close);
+    fireEvent.click(screen.getByRole('button', { name: 'Закрытые' }));
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    expect(within(detail).getByText('Портал закрыт. Действия недоступны.')).toBeInTheDocument();
   });
 
   it('при нехватке энергии критичного портала предлагает безопасный маршрут', () => {

@@ -35,14 +35,14 @@ describe('игровой цикл', () => {
     expect(state.cycle.nextPortalInSeconds).toBe(0);
   });
 
-  it('ускоряет новый портал после автоматического досрочного закрытия', () => {
+  it('не закрывает ранее критичный пустой портал и не ускоряет появление', () => {
     const state = domainState({
       cycle: { ...domainState().cycle, nextPortalInSeconds: 20 },
       portals: [portal({ wasCritical: true, riskStatus: 'critical', energy: 50 })],
     });
     const next = tickGame(state, 1, testDependencies(), testConfig());
-    expect(next.portals[0]?.lifecycle).toBe('closed');
-    expect(next.cycle.nextPortalInSeconds).toBe(5);
+    expect(next.portals[0]?.lifecycle).toBe('active');
+    expect(next.cycle.nextPortalInSeconds).toBe(19);
   });
 
   it('создаёт повторяемый демонстрационный сценарий с девятью мирами', () => {
@@ -100,7 +100,7 @@ describe('игровой цикл', () => {
     expect(frozen.events).toHaveLength(finished.events.length);
   });
 
-  it('автоматически закрывает ранее критичный портал без сотрудников', () => {
+  it('оставляет ранее критичный портал без сотрудников открытым', () => {
     const state = domainState({
       portals: [
         {
@@ -113,7 +113,7 @@ describe('игровой цикл', () => {
       employees: [employee('safe')],
     });
     const next = tickGame(state, 1, testDependencies(), testConfig());
-    expect(next.portals[0]?.lifecycle).toBe('closed');
-    expect(next.portals[0]?.closedReason).toBe('critical-empty');
+    expect(next.portals[0]?.lifecycle).toBe('active');
+    expect(next.portals[0]?.closedReason).toBeNull();
   });
 });

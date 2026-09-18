@@ -85,12 +85,12 @@ export function createReviewScenario(
   };
   if (scenario === 'no-reserve') return {
     ...ready,
-    portals: [{ ...danger, energy: 1, initialLifetimeSeconds: 25, riskStatus: 'dangerous' }],
+    portals: [{ ...danger, energy: 7, initialLifetimeSeconds: 175, riskStatus: 'dangerous' }],
   };
   if (scenario === 'reserve') return {
     ...ready,
     portals: [
-      { ...danger, energy: 1, initialLifetimeSeconds: 25, riskStatus: 'dangerous' },
+      { ...danger, energy: 7, initialLifetimeSeconds: 175, riskStatus: 'dangerous' },
       { ...first, id: 'portal-review-reserve', name: 'Резервный портал', energy: 100,
         dissipationCoefficient: 0, stability: 1, initialLifetimeSeconds: null,
         riskStatus: 'stable', lifecycle: 'active', closedReason: null },
@@ -114,7 +114,7 @@ export function createReviewScenario(
   };
   if (scenario === 'closed') return {
     ...base,
-    portals: [{ ...critical, lifecycle: 'closed', closedReason: 'critical-empty' }],
+    portals: [{ ...critical, lifecycle: 'closed', closedReason: 'manual' }],
   };
   if (scenario === 'limit') return {
     ...base,

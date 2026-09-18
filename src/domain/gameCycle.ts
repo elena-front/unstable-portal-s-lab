@@ -2,7 +2,7 @@ import type { GameBalanceConfig } from '../config/gameBalance';
 import { appendEvent } from './events';
 import { releaseInvalidObservers } from './observerRules';
 import { evolvePortal } from './portalPhysics';
-import { accelerateAfterEarlyClosure, spawnPortal } from './portalDirector';
+import { spawnPortal } from './portalDirector';
 import { advanceResearch } from './research';
 import { employeesInWorld } from './selectors';
 import type {
@@ -120,18 +120,10 @@ function tickStep(
   };
   next = releaseInvalidObservers(next);
 
-  let earlyClosureOccurred = false;
   for (const portal of next.portals) {
     const previous = previousPortals.get(portal.id);
     if (previous?.lifecycle === 'active' && portal.lifecycle === 'collapsed') {
       next = appendEvent(next, dependencies, 'portal', 'info', `${portal.name} схлопнулся.`);
-    } else if (
-      previous?.lifecycle === 'active' &&
-      portal.lifecycle === 'closed' &&
-      portal.closedReason === 'critical-empty'
-    ) {
-      earlyClosureOccurred = true;
-      next = appendEvent(next, dependencies, 'portal', 'info', `${portal.name} автоматически закрыт.`);
     }
   }
   for (const world of next.worlds) {
@@ -152,8 +144,6 @@ function tickStep(
       nextPortalInSeconds,
     },
   };
-  if (earlyClosureOccurred) next = accelerateAfterEarlyClosure(next, config);
-
   if (next.cycle.elapsedSeconds >= next.cycle.durationSeconds) {
     return finishGame(next, dependencies);
   }

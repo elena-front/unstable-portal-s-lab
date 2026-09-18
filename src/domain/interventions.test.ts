@@ -205,6 +205,18 @@ describe('закрытие порталов', () => {
     expect(closePortal({ ...state, portals: [main] }, main.id, false, dependencies, config).ok).toBe(false);
   });
 
+  it('закрывает единственный канал без энергии для одного перехода, если мир пуст', () => {
+    const route = portal({ energy: 3 });
+    const empty = domainState({ portals: [route] });
+    const closed = closePortal(empty, route.id, false, dependencies, config);
+    expect(closed.ok).toBe(true);
+    expect(closed.value.portals[0]?.closedReason).toBe('manual');
+
+    const occupied = domainState({ portals: [route],
+      employees: [employee('field', { location: { worldId: 'world-1' } })] });
+    expect(closePortal(occupied, route.id, true, dependencies, config).ok).toBe(false);
+  });
+
   it('не позволяет закрыть последний маршрут к сотруднику', () => {
     const state = domainState({
       worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],

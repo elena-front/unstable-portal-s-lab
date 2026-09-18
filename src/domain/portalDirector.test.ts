@@ -36,7 +36,7 @@ describe('случайный директор порталов', () => {
     const next = spawnPortal(state, dependencies, testConfig());
     expect(next.portals[0]?.riskStatus).toBe(status);
     expect(next.portals[0]?.lifecycle).toBe('active');
-    expect(next.portals[0]?.openingGraceSecondsRemaining).toBe(20);
+    expect(next.portals[0]?.openingGraceSecondsRemaining).toBeUndefined();
   });
 
   it('после двух известных назначений принудительно выбирает скрытый мир', () => {
