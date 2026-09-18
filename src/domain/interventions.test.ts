@@ -33,9 +33,22 @@ describe('стабилизация и наблюдатель', () => {
     expect(result.value.cycle.stabilizationAttemptsUsed).toBe(1);
 
     const duplicate = domainState({ portals: [portal(), portal({ id: 'second' })] });
-    const blocked = stabilizePortal(duplicate, 'portal-1', testDependencies(() => 0), config);
-    expect(blocked.ok).toBe(false);
-    expect(blocked.value.cycle.stabilizationAttemptsUsed).toBe(0);
+    const allowed = stabilizePortal(duplicate, 'portal-1', testDependencies(() => 0), config);
+    expect(allowed.ok).toBe(true);
+    expect(allowed.value.cycle.stabilizationAttemptsUsed).toBe(1);
+  });
+
+  it('требует подтверждение, если есть менее рисковый маршрут', () => {
+    const risky = portal({ riskStatus: 'critical', energy: 40, initialLifetimeSeconds: 2000 });
+    const safer = portal({ id: 'safer', name: 'Запасной', riskStatus: 'stable', initialLifetimeSeconds: 1000 });
+    const state = domainState({ portals: [risky, safer] });
+    const rejected = stabilizePortal(state, risky.id, testDependencies(() => 0), config);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.value.cycle.stabilizationAttemptsUsed).toBe(0);
+    if (!rejected.ok) expect(rejected.reason).toContain('Запасной');
+    const confirmed = stabilizePortal(state, risky.id, testDependencies(() => 0), config, true);
+    expect(confirmed.ok).toBe(true);
+    expect(confirmed.value.cycle.stabilizationAttemptsUsed).toBe(1);
   });
 
   it('повышает шанс опасного портала наблюдателем', () => {
@@ -151,6 +164,7 @@ describe('закрытие порталов', () => {
     const state = domainState({
       cycle: { ...domainState().cycle, nextPortalInSeconds: 20 },
       portals: [portal({ lifecycle: 'collapsed', energy: 0 })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
     });
     const result = closePortal(state, 'portal-1', false, dependencies, config);
     expect(result.ok).toBe(true);
@@ -184,6 +198,8 @@ describe('закрытие порталов', () => {
       config,
     );
     expect(unexplored.ok).toBe(false);
+    if (!unexplored.ok) expect(unexplored.reason).toContain('Подтвердите');
+    expect(closePortal(domainState(), 'portal-1', true, dependencies, config).ok).toBe(true);
 
     const explored = closePortal(
       domainState({ worlds: [world({ researchStatus: 'explored', researchProgress: 100 })] }),
@@ -203,28 +219,30 @@ describe('закрытие порталов', () => {
     const state = domainState({ portals: [main, reserve] });
     expect(closePortal(state, main.id, false, dependencies, config).ok).toBe(true);
     expect(closePortal({ ...state, portals: [main] }, main.id, false, dependencies, config).ok).toBe(false);
+    expect(closePortal({ ...state, portals: [main] }, main.id, true, dependencies, config).ok).toBe(true);
   });
 
   it('закрывает единственный канал без энергии для одного перехода, если мир пуст', () => {
     const route = portal({ energy: 3 });
     const empty = domainState({ portals: [route] });
-    const closed = closePortal(empty, route.id, false, dependencies, config);
+    const closed = closePortal(empty, route.id, true, dependencies, config);
     expect(closed.ok).toBe(true);
     expect(closed.value.portals[0]?.closedReason).toBe('manual');
 
     const occupied = domainState({ portals: [route],
       employees: [employee('field', { location: { worldId: 'world-1' } })] });
-    expect(closePortal(occupied, route.id, true, dependencies, config).ok).toBe(false);
+    expect(closePortal(occupied, route.id, true, dependencies, config).ok).toBe(true);
   });
 
-  it('не позволяет закрыть последний маршрут к сотруднику', () => {
+  it('закрывает последний маршрут к сотруднику только после предупреждения', () => {
     const state = domainState({
       worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],
       employees: [employee('field', { location: { worldId: 'world-1' } })],
     });
+    expect(closePortal(state, 'portal-1', false, dependencies, config).ok).toBe(false);
     const result = closePortal(state, 'portal-1', true, dependencies, config);
-    expect(result.ok).toBe(false);
-    expect(result.value.portals[0]?.lifecycle).toBe('active');
+    expect(result.ok).toBe(true);
+    expect(result.value.portals[0]?.lifecycle).toBe('closed');
   });
 
   it('закрывает исследованный маршрут при подтверждении и надёжном резерве', () => {
@@ -249,6 +267,13 @@ describe('закрытие порталов', () => {
     expect(closed.ok).toBe(true);
     expect(closed.value.portals[0]?.lifecycle).toBe('closed');
     const noReserve = closePortal({ ...state, portals: [critical] }, critical.id, true, dependencies, config);
-    expect(noReserve.ok).toBe(false);
+    expect(noReserve.ok).toBe(true);
+  });
+
+  it('закрывает критичный канал без предупреждения, если есть другой маршрут и мир пуст', () => {
+    const critical = portal({ riskStatus: 'critical', energy: 10 });
+    const alternative = portal({ id: 'alternative' });
+    const state = domainState({ portals: [critical, alternative] });
+    expect(closePortal(state, critical.id, false, dependencies, config).ok).toBe(true);
   });
 });

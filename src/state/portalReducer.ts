@@ -59,7 +59,7 @@ export type PortalAction =
       employeeIds: string[];
     }
   | { type: 'sendObserver'; portalId: string; employeeId: string }
-  | { type: 'stabilizePortal'; portalId: string }
+  | { type: 'stabilizePortal'; portalId: string; confirmed?: boolean }
   | { type: 'closePortal'; portalId: string; confirmed: boolean }
   | { type: 'newGame' }
   | { type: 'startGame'; scenario: ReviewScenario }
@@ -201,7 +201,7 @@ export function createPortalReducer(
       case 'stabilizePortal':
         return domainResultToState(
           state,
-          stabilizePortal(state, action.portalId, dependencies, config),
+          stabilizePortal(state, action.portalId, dependencies, config, action.confirmed),
         );
       case 'closePortal': {
         const result = closePortal(state, action.portalId, action.confirmed, dependencies, config);

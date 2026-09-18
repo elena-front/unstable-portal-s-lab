@@ -42,7 +42,7 @@ export function actionAvailability(
       (inWorld === 0 ? 'В этом мире нет сотрудников для возвращения.' : null) ??
       (maxReturnCount(portal, config) === 0 ? 'Энергии недостаточно даже для одного сотрудника.' : null),
     stabilize: unavailable ?? notActive ??
-      (!isStabilizationEligible(state, portal) ? 'Стабилизация доступна единственному стабильному маршруту или важному опасному/критичному порталу.' : null) ??
+      (!isStabilizationEligible(state, portal) ? 'Портал недоступен для стабилизации.' : null) ??
       (portal.stabilizationBonus >= config.maxStabilizationBonus ? 'Достигнут максимальный бонус стабилизации.' : null) ??
       (state.cycle.stabilizationAttemptsUsed >= config.stabilizationAttempts ? 'Попытки стабилизации закончились.' : null),
     observe: unavailable ?? notActive ??
@@ -51,9 +51,6 @@ export function actionAvailability(
       (observerAssigned ? 'Наблюдатель уже назначен другому порталу.' : null) ??
       (free === 0 ? 'В лаборатории нет свободных сотрудников.' : null) ??
       (energyAfterTransit(portal, 1, config) === 0 ? 'Переход наблюдателя исчерпает портал.' : null),
-    close: unavailable ??
-      (portal.lifecycle === 'closed' ? 'Портал уже закрыт.' : null) ??
-      (portal.lifecycle === 'active' && world?.researchStatus !== 'explored' && (inWorld > 0 || maxReturnCount(portal, config) > 0) && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.' : null) ??
-      (portal.lifecycle === 'active' && inWorld > 0 && !findReliableReserve(state, portal, inWorld, 0, config) ? 'Закрытие оставит сотрудников без надёжного маршрута.' : null),
+    close: unavailable ?? (portal.lifecycle === 'closed' ? 'Портал уже закрыт.' : null),
   };
 }

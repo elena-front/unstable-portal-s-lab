@@ -2,8 +2,6 @@ import type { GameBalanceConfig } from '../config/gameBalance';
 import { appendEvent } from './events';
 import {
   energyAfterTransit,
-  findReliableReserve,
-  maxReturnCount,
 } from './expeditions';
 import { releaseInvalidObservers } from './observerRules';
 import { accelerateAfterEarlyClosure } from './portalDirector';
@@ -11,8 +9,10 @@ import { portalRisk, remainingLifetime, synchronizePortal } from './portalPhysic
 import { clamp, randomFloat } from './random';
 import {
   employeesInWorld,
+  closeConfirmationReason,
   isStabilizationEligible,
   isVeryImportantPortal,
+  lessRiskyAlternative,
 } from './selectors';
 import type {
   DomainDependencies,
@@ -65,6 +65,7 @@ export function stabilizePortal(
   portalId: string,
   dependencies: DomainDependencies,
   config: GameBalanceConfig,
+  confirmed = false,
 ): DomainResult {
   if (state.cycle.status !== 'running') {
     return rejected(state, dependencies, 'stabilization', 'Партия уже завершена.');
@@ -74,13 +75,17 @@ export function stabilizePortal(
     return rejected(state, dependencies, 'stabilization', 'Портал недоступен.');
   }
   if (!isStabilizationEligible(state, portal)) {
-    return rejected(state, dependencies, 'stabilization', 'Стабилизация доступна единственному стабильному маршруту или важному опасному/критичному порталу.');
+    return rejected(state, dependencies, 'stabilization', 'Портал недоступен для стабилизации.');
   }
   if (portal.stabilizationBonus >= config.maxStabilizationBonus) {
     return rejected(state, dependencies, 'stabilization', 'Достигнут максимальный бонус стабилизации.');
   }
   if (state.cycle.stabilizationAttemptsUsed >= config.stabilizationAttempts) {
     return rejected(state, dependencies, 'stabilization', 'Попытки стабилизации закончились.');
+  }
+  const alternative = lessRiskyAlternative(state, portal, config);
+  if (alternative && !confirmed) {
+    return rejected(state, dependencies, 'stabilization', `Подтвердите стабилизацию: менее рисковый маршрут — ${alternative.name}.`);
   }
 
   const observer = state.employees.find(
@@ -209,19 +214,8 @@ export function closePortal(
   if (portal.lifecycle === 'active') {
     const world = state.worlds.find((candidate) => candidate.id === portal.destinationWorldId);
     if (!world) return rejected(state, dependencies, 'portal', 'Мир назначения не найден.');
-    const count = employeesInWorld(state, world.id).length;
-    const reserve = findReliableReserve(state, portal, count, 0, config);
-    if (world.researchStatus !== 'explored' && (count > 0 || maxReturnCount(portal, config) > 0) && !reserve) {
-      return rejected(state, dependencies, 'portal', 'Для закрытия канала в неисследованный мир нужен другой надёжный маршрут.');
-    }
-    if (count > 0) {
-      if (!confirmed) {
-        return rejected(state, dependencies, 'portal', 'Подтвердите закрытие портала с сотрудниками в мире.');
-      }
-      if (!reserve) {
-        return rejected(state, dependencies, 'portal', 'Закрытие оставит сотрудников без надёжного маршрута.');
-      }
-    }
+    if (closeConfirmationReason(state, portal) && !confirmed)
+      return rejected(state, dependencies, 'portal', 'Подтвердите закрытие портала и риск потери доступа к миру.');
     reason = 'manual';
   }
 

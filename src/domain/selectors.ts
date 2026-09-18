@@ -1,5 +1,5 @@
 import type { GameBalanceConfig } from '../config/gameBalance';
-import { remainingLifetime } from './portalPhysics';
+import { portalRisk, remainingLifetime } from './portalPhysics';
 import type { DomainState, Employee, Portal } from './types';
 
 export function isEmployeeInWorld(employee: Employee, worldId: string): boolean {
@@ -44,12 +44,23 @@ export function isVeryImportantPortal(state: DomainState, portal: Portal): boole
 }
 
 export function isStabilizationEligible(state: DomainState, portal: Portal): boolean {
-  if (portal.lifecycle !== 'active') return false;
-  if (portal.riskStatus === 'stable') {
-    const routes = activePortalsToWorld(state, portal.destinationWorldId);
-    return routes.length === 1 && routes[0]?.id === portal.id;
-  }
-  return isImportantPortal(state, portal);
+  return portal.lifecycle === 'active' && state.portals.some((route) => route.id === portal.id);
+}
+
+export function lessRiskyAlternative(state: DomainState, portal: Portal, config: GameBalanceConfig): Portal | null {
+  return activePortalsToWorld(state, portal.destinationWorldId)
+    .filter((route) => route.id !== portal.id && portalRisk(route, config) < portalRisk(portal, config))
+    .sort((a, b) => portalRisk(a, config) - portalRisk(b, config))[0] ?? null;
+}
+
+export function closeConfirmationReason(state: DomainState, portal: Portal): string | null {
+  if (portal.lifecycle !== 'active') return null;
+  const world = state.worlds.find((item) => item.id === portal.destinationWorldId);
+  const employees = employeesInWorld(state, portal.destinationWorldId).length;
+  const lastRoute = activePortalsToWorld(state, portal.destinationWorldId).every((route) => route.id === portal.id);
+  if (employees > 0) return `В мире остались сотрудники (${employees}). Закрытие канала может оставить их без маршрута возвращения. Закрыть портал?`;
+  if (world?.researchStatus !== 'explored' && lastRoute) return 'Это последний работающий портал в неисследованный мир. Доступ к нему будет потерян до появления нового канала. Закрыть портал?';
+  return null;
 }
 
 export function recommendationForPortal(portal: Portal): string {

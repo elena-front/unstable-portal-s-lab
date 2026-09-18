@@ -19,6 +19,7 @@ afterEach(() => { cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restor
 
 describe('App', () => {
   it('показывает результат действия тостом и скрывает его по таймеру или кнопке', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
     renderGame();
     vi.useFakeTimers();
@@ -31,6 +32,7 @@ describe('App', () => {
   });
 
   it('позволяет закрыть тост вручную', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
     renderGame();
     fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
@@ -56,7 +58,7 @@ describe('App', () => {
   });
   it('показывает легенду и выбор сценария только перед началом партии', () => {
     renderGame(false);
-    expect(screen.getByRole('heading', { name: 'Краткие правила' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Правила и решения оператора' })).toBeInTheDocument();
     expect(screen.getByLabelText('Режим запуска')).toHaveValue('normal');
     expect(screen.getByText(/готовые ситуации для проверки отдельных правил/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Начать партию' }));
@@ -121,6 +123,7 @@ describe('App', () => {
   });
 
   it('позволяет оператору закрыть пустой канал без энергии для экспедиции', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const initial = createAppState(domainState({ portals: [portal({ energy: 3 })] }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
@@ -133,6 +136,36 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Закрытые' }));
     fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
     expect(within(detail).getByText('Портал закрыт. Действия недоступны.')).toBeInTheDocument();
+  });
+
+  it('предупреждает перед закрытием последнего маршрута и сохраняет его при отказе', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    expect(saveAppState(localStorage, createAppState(domainState()))).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('последний работающий портал'));
+    expect(screen.getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Стабильный');
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Портал закрыт');
+  });
+
+  it('предупреждает о менее рисковом маршруте перед стабилизацией', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const risky = portal({ energy: 40, initialLifetimeSeconds: 2000, riskStatus: 'critical' });
+    const safer = portal({ id: 'safer', name: 'Запасной', initialLifetimeSeconds: 1000 });
+    expect(saveAppState(localStorage, createAppState(domainState({ portals: [risky, safer] })))).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    const stabilize = screen.getByRole('button', { name: 'Стабилизировать' });
+    expect(stabilize).toBeEnabled();
+    fireEvent.click(stabilize);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('«Запасной»'));
+    expect(screen.getByText(/Осталось попыток: 3/)).toBeInTheDocument();
+    confirm.mockReturnValue(true);
+    fireEvent.click(stabilize);
+    expect(screen.getByText(/Осталось попыток: 2/)).toBeInTheDocument();
   });
 
   it('после загрузки старой партии возвращает автоматически закрытый канал в список', () => {

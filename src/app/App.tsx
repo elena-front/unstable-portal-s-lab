@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { gameBalance } from '../config/gameBalance';
 import {
   actionAvailability,
+  closeConfirmationReason,
   employeesInWorld,
   energyAfterTransit,
   estimatedResearchSeconds,
   findBetterReturnPortal,
   findReliableReserve,
+  lessRiskyAlternative,
   maxReturnCount,
   portalRisk,
   recommendationForPortal,
@@ -106,11 +108,18 @@ export function App() {
   };
   const close = () => {
     if (!selected) return;
-    const confirmed = selected.lifecycle === 'active' && inWorld.length > 0
-      ? window.confirm('Закрыть портал? Сотрудники останутся в мире; проверьте резервный маршрут.')
-      : true;
+    const warning = closeConfirmationReason(state, selected);
+    const confirmed = warning ? window.confirm(warning) : true;
     if (!confirmed) return;
     dispatch({ type: 'closePortal', portalId: selected.id, confirmed });
+  };
+  const stabilize = () => {
+    if (!selected) return;
+    const alternative = lessRiskyAlternative(state, selected, gameBalance);
+    const confirmed = alternative
+      ? window.confirm(`В мир ведёт менее рисковый портал «${alternative.name}». Всё равно потратить попытку на стабилизацию «${selected.name}»?`)
+      : true;
+    if (confirmed) dispatch({ type: 'stabilizePortal', portalId: selected.id, confirmed });
   };
   const newGame = () => { dispatch({ type: 'newGame' }); setDismissedResultId(null); };
   const clearHistory = () => {
@@ -164,7 +173,7 @@ export function App() {
               }}>Выбрать маршрут: {returnAlternative.name}</button>}
               </section><section className={styles.actionPanel} aria-labelledby="channel-heading"><h3 id="channel-heading">Управление порталом</h3>
               <p>Стабилизация: шанс {Math.round(stabilizationChance(selected, Boolean(observer), gameBalance) * 100)}%. Осталось попыток: {gameBalance.stabilizationAttempts - state.cycle.stabilizationAttemptsUsed}.</p>
-              <button onClick={() => dispatch({ type: 'stabilizePortal', portalId: selected.id })} disabled={availability?.stabilize !== null} aria-describedby={availability?.stabilize ? 'stabilize-reason' : undefined}>Стабилизировать</button>
+              <button onClick={stabilize} disabled={availability?.stabilize !== null} aria-describedby={availability?.stabilize ? 'stabilize-reason' : undefined}>Стабилизировать</button>
               {availability?.stabilize && <p id="stabilize-reason" className={styles.reason}>{availability.stabilize}</p>}
               <button onClick={() => dispatch({ type: 'sendObserver', portalId: selected.id, employeeId: available[0]?.id ?? '' })} disabled={availability?.observe !== null} aria-describedby={availability?.observe ? 'observe-reason' : undefined}>Назначить наблюдателя</button>
               {availability?.observe && <p id="observe-reason" className={styles.reason}>{availability.observe}</p>}

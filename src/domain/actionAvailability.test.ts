@@ -17,7 +17,7 @@ describe('проверочные сценарии и причины действ
     const single = domainState();
     expect(actionAvailability(single, single.portals[0]!, 1, gameBalance).stabilize).toBeNull();
     const duplicate = domainState({ portals: [portal(), portal({ id: 'second' })] });
-    expect(actionAvailability(duplicate, duplicate.portals[0]!, 1, gameBalance).stabilize).toContain('единственному');
+    expect(actionAvailability(duplicate, duplicate.portals[0]!, 1, gameBalance).stabilize).toBeNull();
   });
   it('создаёт воспроизводимые состояния для проверки', () => {
     for (const name of scenarios) {
@@ -66,7 +66,7 @@ describe('проверочные сценарии и причины действ
     const withReserve = domainState({ portals: [critical, reserve] });
     expect(actionAvailability(withReserve, critical, 1, gameBalance).close).toBeNull();
     const withoutReserve = domainState({ portals: [critical] });
-    expect(actionAvailability(withoutReserve, critical, 1, gameBalance).close).toContain('надёжный маршрут');
+    expect(actionAvailability(withoutReserve, critical, 1, gameBalance).close).toBeNull();
   });
 
   it('разрешает закрыть стабильный канал в неисследованный мир с резервом', () => {
@@ -75,7 +75,7 @@ describe('проверочные сценарии и причины действ
       initialLifetimeSeconds: null });
     const state = domainState({ portals: [main, reserve] });
     expect(actionAvailability(state, main, 1, gameBalance).close).toBeNull();
-    expect(actionAvailability({ ...state, portals: [main] }, main, 1, gameBalance).close).toContain('надёжный маршрут');
+    expect(actionAvailability({ ...state, portals: [main] }, main, 1, gameBalance).close).toBeNull();
   });
 
   it('даёт закрыть пустой маршрут, энергии которого не хватает даже на одного', () => {
@@ -87,8 +87,7 @@ describe('проверочные сценарии и причины действ
 
     const occupied = domainState({ portals: [route],
       employees: [employee('field', { location: { worldId: 'world-1' } })] });
-    expect(actionAvailability(occupied, route, 1, gameBalance).close)
-      .toContain('надёжный маршрут');
+    expect(actionAvailability(occupied, route, 1, gameBalance).close).toBeNull();
   });
 
   it('объясняет риск изоляции и исчерпание попыток', () => {
@@ -99,7 +98,7 @@ describe('проверочные сценарии и причины действ
       cycle: { ...domainState().cycle, stabilizationAttemptsUsed: gameBalance.stabilizationAttempts },
     });
     const reason = actionAvailability(state, state.portals[0]!, 1, gameBalance);
-    expect(reason.close).toContain('без надёжного маршрута');
+    expect(reason.close).toBeNull();
     expect(reason.stabilize).toContain('закончились');
   });
 
