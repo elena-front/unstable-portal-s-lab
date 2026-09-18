@@ -86,15 +86,24 @@ function appendResultOnce(history: GameResult[], result: GameResult): GameResult
     : [...history, result];
 }
 
+function selectionAfterPortalChange(state: AppState, portals: Portal[]): Pick<AppState, 'selectedPortalId' | 'portalFilter'> {
+  const selected = portals.find((portal) => portal.id === state.selectedPortalId);
+  if (selected?.lifecycle === 'collapsed' && state.portalFilter !== 'all' &&
+      !portalMatchesFilter(selected, state.portalFilter)) {
+    return { selectedPortalId: selected.id, portalFilter: 'all' };
+  }
+  return {
+    selectedPortalId: selected && portalMatchesFilter(selected, state.portalFilter) ? selected.id : null,
+    portalFilter: state.portalFilter,
+  };
+}
+
 function domainResultToState(state: AppState, result: DomainResult): AppState {
   const lastEvent = result.value.events.at(-1);
-  const selectedPortalId = state.selectedPortalId && result.value.portals.some(
-    (portal) => portal.id === state.selectedPortalId && portalMatchesFilter(portal, state.portalFilter),
-  ) ? state.selectedPortalId : null;
   return {
     ...state,
     ...result.value,
-    selectedPortalId,
+    ...selectionAfterPortalChange(state, result.value.portals),
     notification: {
       kind: result.ok ? 'success' : 'error',
       message: lastEvent?.message ?? (result.ok ? 'Действие выполнено.' : result.reason),
@@ -131,9 +140,7 @@ export function createPortalReducer(
         return {
           ...state,
           ...next,
-          selectedPortalId: state.selectedPortalId && next.portals.some(
-            (portal) => portal.id === state.selectedPortalId && portalMatchesFilter(portal, state.portalFilter),
-          ) ? state.selectedPortalId : null,
+          ...selectionAfterPortalChange(state, next.portals),
           resultHistory: result
             ? appendResultOnce(state.resultHistory, result)
             : state.resultHistory,

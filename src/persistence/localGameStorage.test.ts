@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadAppState, saveAppState, GAME_STORAGE_KEY, HISTORY_STORAGE_KEY } from './localGameStorage';
+import { loadAppState, saveAppState, GAME_STORAGE_KEY, HISTORY_STORAGE_KEY, STORAGE_VERSION } from './localGameStorage';
 import { createAppState, createPortalReducer } from '../state/portalReducer';
 import { domainState, portal, testConfig, testDependencies } from '../test/domainFixtures';
 import { finishGame } from '../domain/gameCycle';
 import { createWorlds } from '../domain/gameFactory';
+import { actionAvailability } from '../domain/actionAvailability';
+import { unclosedPortalCount } from '../domain/selectors';
 
 function memoryStorage() {
   const entries = new Map<string, string>();
@@ -53,6 +55,50 @@ describe('версионированное локальное сохранени
     const loaded = loadAppState(storage, dependencies, config);
     expect(loaded.storageWarning).toBeNull();
     expect(loaded.portals).toHaveLength(20);
+  });
+
+  it('восстанавливает автоматически закрытые каналы старой незавершённой партии', () => {
+    const storage = memoryStorage();
+    const old = createAppState(domainState({ portals: [
+      portal({ id: 'positive', energy: 3, lifecycle: 'closed', closedReason: 'critical-empty',
+        riskStatus: 'critical', wasCritical: true }),
+      portal({ id: 'empty', energy: 0, lifecycle: 'closed', closedReason: 'critical-empty',
+        riskStatus: 'critical', wasCritical: true }),
+      portal({ id: 'manual', lifecycle: 'closed', closedReason: 'manual' }),
+    ] }));
+    old.selectedPortalId = 'empty';
+    old.portalFilter = 'closed';
+    saveAppState(storage, old);
+    const saved = JSON.parse(storage.getItem(GAME_STORAGE_KEY)!);
+    saved.version = 1;
+    storage.setItem(GAME_STORAGE_KEY, JSON.stringify(saved));
+
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.storageWarning).toBeNull();
+    expect(loaded.portals.map((item) => [item.lifecycle, item.closedReason])).toEqual([
+      ['active', null], ['collapsed', null], ['closed', 'manual'],
+    ]);
+    expect(unclosedPortalCount(loaded.portals)).toBe(2);
+    expect(loaded.portalFilter).toBe('all');
+    expect(loaded.selectedPortalId).toBe('empty');
+    expect(actionAvailability(loaded, loaded.portals[0]!, 1, config).close).toBeNull();
+    expect(actionAvailability(loaded, loaded.portals[1]!, 1, config).close).toBeNull();
+    saveAppState(storage, loaded);
+    expect(JSON.parse(storage.getItem(GAME_STORAGE_KEY)!).version).toBe(STORAGE_VERSION);
+    expect(loadAppState(storage, dependencies, config).portals).toEqual(loaded.portals);
+  });
+
+  it('не меняет автоматически закрытые каналы и итог завершённой партии', () => {
+    const storage = memoryStorage();
+    const finished = finishGame(domainState({ portals: [portal({ energy: 3,
+      lifecycle: 'closed', closedReason: 'critical-empty' })] }), dependencies);
+    saveAppState(storage, createAppState(finished));
+    const saved = JSON.parse(storage.getItem(GAME_STORAGE_KEY)!);
+    saved.version = 1;
+    storage.setItem(GAME_STORAGE_KEY, JSON.stringify(saved));
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.portals[0]?.closedReason).toBe('critical-empty');
+    expect(loaded.cycle.result).toEqual(finished.cycle.result);
   });
 
   it('восстанавливает историю независимо от повреждённой партии', () => {

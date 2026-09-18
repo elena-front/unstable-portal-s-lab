@@ -30,6 +30,20 @@ describe('Portal reducer', () => {
     expect(rejected.events.at(-1)?.outcome).toBe('rejected');
   });
 
+  it('сохраняет выбранный канал после схлопывания и открывает все незакрытые', () => {
+    const initial = createAppState(domainState({
+      portals: [portal({ energy: 7, riskStatus: 'critical', wasCritical: true })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+    }));
+    const selected = reducer(reducer(initial, { type: 'setFilter', filter: 'critical' }),
+      { type: 'selectPortal', portalId: 'portal-1' });
+    const returned = reducer(selected, { type: 'returnEmployees',
+      portalId: 'portal-1', employeeIds: ['field'] });
+    expect(returned.portals[0]?.lifecycle).toBe('collapsed');
+    expect(returned.portalFilter).toBe('all');
+    expect(returned.selectedPortalId).toBe('portal-1');
+  });
+
   it('после завершения добавляет результат ровно один раз и замораживает партию', () => {
     const initial = createAppState(domainState({
       cycle: { ...domainState().cycle, elapsedSeconds: 599 },

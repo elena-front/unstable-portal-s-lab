@@ -12,6 +12,7 @@ import type {
 } from '../domain/types';
 import {
   createAppState,
+  portalMatchesFilter,
   type ActiveView,
   type AppState,
   type PortalFilter,
@@ -19,7 +20,7 @@ import {
 
 export const GAME_STORAGE_KEY = 'unstable-portals:current:v1';
 export const HISTORY_STORAGE_KEY = 'unstable-portals:history:v1';
-export const STORAGE_VERSION = 1;
+export const STORAGE_VERSION = 2;
 const LEGACY_MAX_UNCLOSED_PORTALS = 20;
 
 export interface StorageAdapter {
@@ -227,7 +228,7 @@ function validDomain(value: unknown, config: GameBalanceConfig): value is Domain
 }
 
 interface SavedCurrent {
-  version: 1;
+  version: 1 | 2;
   domain: DomainState;
   selectedPortalId: string | null;
   portalFilter: PortalFilter;
@@ -236,7 +237,7 @@ interface SavedCurrent {
 }
 
 interface SavedHistory {
-  version: 1;
+  version: 1 | 2;
   results: GameResult[];
   historyClearedForCycleId: string | null;
 }
@@ -244,7 +245,7 @@ interface SavedHistory {
 function validCurrent(value: unknown, config: GameBalanceConfig): value is SavedCurrent {
   if (!record(value)) return false;
   return (
-    value.version === STORAGE_VERSION &&
+    (value.version === 1 || value.version === STORAGE_VERSION) &&
     validDomain(value.domain, config) &&
     (value.selectedPortalId === null || string(value.selectedPortalId)) &&
     member(value.portalFilter, ['all', 'stable', 'dangerous', 'critical', 'collapsed', 'closed']) &&
@@ -256,7 +257,7 @@ function validCurrent(value: unknown, config: GameBalanceConfig): value is Saved
 function validHistory(value: unknown): value is SavedHistory {
   if (!record(value)) return false;
   return (
-    value.version === STORAGE_VERSION &&
+    (value.version === 1 || value.version === STORAGE_VERSION) &&
     Array.isArray(value.results) &&
     value.results.every(validGameResult) &&
     uniqueIds(value.results as GameResult[]) &&
@@ -297,7 +298,23 @@ export function loadAppState(
     ? currentRead.value
     : null;
   const history = validHistory(historyRead.value) ? historyRead.value : null;
-  const domain = current?.domain ?? createInitialState(dependencies, config);
+  const domain = current
+    ? current.version === 1 && current.domain.cycle.status !== 'finished'
+      ? {
+          ...current.domain,
+          portals: current.domain.portals.map((portal) =>
+            portal.closedReason === 'critical-empty'
+              ? {
+                  ...portal,
+                  lifecycle: portal.energy > 0 ? 'active' as const : 'collapsed' as const,
+                  riskStatus: portal.energy > 0 ? portal.riskStatus : 'critical' as const,
+                  closedReason: null,
+                }
+              : portal,
+          ),
+        }
+      : current.domain
+    : createInitialState(dependencies, config);
   const state = createAppState(domain);
   if (current) {
     state.selectedPortalId =
@@ -306,6 +323,14 @@ export function loadAppState(
         ? current.selectedPortalId
         : null;
     state.portalFilter = current.portalFilter;
+    if (current.version === 1 && current.domain.cycle.status !== 'finished' &&
+        current.selectedPortalId !== null &&
+        current.domain.portals.some((portal) =>
+          portal.id === current.selectedPortalId && portal.closedReason === 'critical-empty') &&
+        domain.portals.some((portal) =>
+          portal.id === current.selectedPortalId && !portalMatchesFilter(portal, state.portalFilter))) {
+      state.portalFilter = 'all';
+    }
     state.activeView = current.activeView;
     state.awaitingStart = current.awaitingStart ?? false;
   } else {

@@ -89,6 +89,40 @@ describe('App', () => {
     expect(within(detail).getByText('Портал закрыт. Действия недоступны.')).toBeInTheDocument();
   });
 
+  it('после загрузки старой партии возвращает автоматически закрытый канал в список', () => {
+    const old = createAppState(domainState({ portals: [portal({ energy: 3,
+      lifecycle: 'closed', closedReason: 'critical-empty', riskStatus: 'critical', wasCritical: true })] }));
+    expect(saveAppState(localStorage, old)).toBeNull();
+    const saved = JSON.parse(localStorage.getItem(GAME_STORAGE_KEY)!);
+    saved.version = 1;
+    localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(saved));
+    renderGame();
+    const row = within(screen.getByRole('region', { name: 'Список порталов' }))
+      .getByRole('button', { name: /Канал 1/ });
+    expect(row).toBeInTheDocument();
+    fireEvent.click(row);
+    const close = within(screen.getByRole('region', { name: 'Детали портала' }))
+      .getByRole('button', { name: 'Закрыть портал' });
+    expect(close).toBeEnabled();
+  });
+
+  it('после аварийного возврата оставляет выбранный схлопнувшийся канал видимым', () => {
+    const initial = createAppState(domainState({
+      portals: [portal({ energy: 7, riskStatus: 'critical', wasCritical: true })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+    }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: 'Критичные' }));
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуть сотрудников (1)' }));
+    expect(screen.getByRole('button', { name: 'Все активные' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByRole('region', { name: 'Список порталов' }))
+      .getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Схлопнулся');
+    expect(within(screen.getByRole('region', { name: 'Детали портала' }))
+      .getByRole('button', { name: 'Закрыть схлопнувшийся портал' })).toBeEnabled();
+  });
+
   it('при нехватке энергии критичного портала предлагает безопасный маршрут', () => {
     const initial = createAppState(domainState({
       portals: [portal({ riskStatus: 'critical', energy: 3, wasCritical: true }),
