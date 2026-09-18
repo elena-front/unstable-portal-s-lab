@@ -287,6 +287,11 @@ function parseSaved(
   }
 }
 
+function normalizePortalName(name: string): string {
+  return name.replace(/(?<![А-Яа-яЁё])Канал(?![А-Яа-яЁё])/g, 'Портал')
+    .replace(/(?<![А-Яа-яЁё])канал(?![А-Яа-яЁё])/g, 'портал');
+}
+
 export function loadAppState(
   storage: StorageAdapter | null,
   dependencies: DomainDependencies,
@@ -315,7 +320,10 @@ export function loadAppState(
         }
       : current.domain
     : createInitialState(dependencies, config);
-  const state = createAppState(domain);
+  const state = createAppState({
+    ...domain,
+    portals: domain.portals.map((portal) => ({ ...portal, name: normalizePortalName(portal.name) })),
+  });
   if (current) {
     state.selectedPortalId =
       current.selectedPortalId !== null &&

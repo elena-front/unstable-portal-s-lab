@@ -189,7 +189,7 @@ describe('закрытие порталов', () => {
     expect(sooner.value.cycle.nextPortalInSeconds).toBe(2);
   });
 
-  it('разрешает закрыть стабильный канал в исследованный мир без резерва', () => {
+  it('разрешает закрыть стабильный портал в исследованный мир без резерва', () => {
     const unexplored = closePortal(
       domainState(),
       'portal-1',
@@ -212,7 +212,7 @@ describe('закрытие порталов', () => {
     expect(explored.value.portals[0]?.closedReason).toBe('manual');
   });
 
-  it('разрешает закрыть стабильный канал в неисследованный мир при надёжном резерве', () => {
+  it('разрешает закрыть стабильный портал в неисследованный мир при надёжном резерве', () => {
     const main = portal({ riskStatus: 'stable' });
     const reserve = portal({ id: 'reserve', stability: 1, dissipationCoefficient: 0,
       initialLifetimeSeconds: null });
@@ -222,7 +222,7 @@ describe('закрытие порталов', () => {
     expect(closePortal({ ...state, portals: [main] }, main.id, true, dependencies, config).ok).toBe(true);
   });
 
-  it('закрывает единственный канал без энергии для одного перехода, если мир пуст', () => {
+  it('закрывает единственный портал без энергии для одного перехода, если мир пуст', () => {
     const route = portal({ energy: 3 });
     const empty = domainState({ portals: [route] });
     const closed = closePortal(empty, route.id, true, dependencies, config);
@@ -270,7 +270,7 @@ describe('закрытие порталов', () => {
     expect(noReserve.ok).toBe(true);
   });
 
-  it('закрывает критичный канал без предупреждения, если есть другой маршрут и мир пуст', () => {
+  it('закрывает критичный портал без предупреждения, если есть другой маршрут и мир пуст', () => {
     const critical = portal({ riskStatus: 'critical', energy: 10 });
     const alternative = portal({ id: 'alternative' });
     const state = domainState({ portals: [critical, alternative] });

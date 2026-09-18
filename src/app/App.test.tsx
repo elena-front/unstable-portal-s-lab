@@ -23,7 +23,7 @@ describe('App', () => {
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
     renderGame();
     vi.useFakeTimers();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
     expect(screen.getByRole('status')).toHaveTextContent('Портал');
     expect(screen.getByRole('status').parentElement?.className).toContain('toastRegion');
@@ -35,17 +35,17 @@ describe('App', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
     expect(screen.getByRole('status')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть уведомление' }));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('раскрывает дополнительные характеристики выбранного канала', () => {
+  it('раскрывает дополнительные характеристики выбранного портала', () => {
     expect(saveAppState(localStorage, createAppState(domainState()))).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     const details = within(detail).getByText('Показать все характеристики портала').closest('details');
     expect(details).not.toHaveAttribute('open');
@@ -106,14 +106,14 @@ describe('App', () => {
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     expect(within(screen.getByRole('region', { name: 'Список порталов' }))
-      .getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Таласса (исследован на 10%, 1 сотр.)');
+      .getByRole('button', { name: /Портал 1/ })).toHaveTextContent('Таласса (исследован на 10%, 1 сотр.)');
   });
 
   it('отправляет группу и возвращает её через выбранный портал', () => {
     const initial = createAppState(domainState());
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     fireEvent.change(screen.getByLabelText('Размер группы'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Отправить сотрудников' }));
     expect(screen.getByText('В лаборатории: 0 из 2')).toBeInTheDocument();
@@ -122,19 +122,19 @@ describe('App', () => {
     expect(screen.getByText('В лаборатории: 2 из 2')).toBeInTheDocument();
   });
 
-  it('позволяет оператору закрыть пустой канал без энергии для экспедиции', () => {
+  it('позволяет оператору закрыть пустой портал без энергии для экспедиции', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const initial = createAppState(domainState({ portals: [portal({ energy: 3 })] }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     expect(within(detail).getByRole('button', { name: 'Отправить сотрудников' })).toBeDisabled();
     const close = within(detail).getByRole('button', { name: 'Закрыть портал' });
     expect(close).toBeEnabled();
     fireEvent.click(close);
     fireEvent.click(screen.getByRole('button', { name: 'Закрытые' }));
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     expect(within(detail).getByText('Портал закрыт. Действия недоступны.')).toBeInTheDocument();
   });
 
@@ -142,10 +142,10 @@ describe('App', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     expect(saveAppState(localStorage, createAppState(domainState()))).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('последний работающий портал'));
-    expect(screen.getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Стабильный');
+    expect(screen.getByRole('button', { name: /Портал 1/ })).toHaveTextContent('Стабильный');
     confirm.mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
     expect(screen.getByRole('status')).toHaveTextContent('Портал закрыт');
@@ -157,7 +157,7 @@ describe('App', () => {
     const safer = portal({ id: 'safer', name: 'Запасной', initialLifetimeSeconds: 1000 });
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [risky, safer] })))).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const stabilize = screen.getByRole('button', { name: 'Стабилизировать' });
     expect(stabilize).toBeEnabled();
     fireEvent.click(stabilize);
@@ -168,7 +168,7 @@ describe('App', () => {
     expect(screen.getByText(/Осталось попыток: 2/)).toBeInTheDocument();
   });
 
-  it('после загрузки старой партии возвращает автоматически закрытый канал в список', () => {
+  it('после загрузки старой партии возвращает автоматически закрытый портал в список', () => {
     const old = createAppState(domainState({ portals: [portal({ energy: 3,
       lifecycle: 'closed', closedReason: 'critical-empty', riskStatus: 'critical', wasCritical: true })] }));
     expect(saveAppState(localStorage, old)).toBeNull();
@@ -177,7 +177,7 @@ describe('App', () => {
     localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(saved));
     renderGame();
     const row = within(screen.getByRole('region', { name: 'Список порталов' }))
-      .getByRole('button', { name: /Канал 1/ });
+      .getByRole('button', { name: /Портал 1/ });
     expect(row).toBeInTheDocument();
     fireEvent.click(row);
     const close = within(screen.getByRole('region', { name: 'Детали портала' }))
@@ -185,7 +185,7 @@ describe('App', () => {
     expect(close).toBeEnabled();
   });
 
-  it('после аварийного возврата оставляет выбранный схлопнувшийся канал видимым', () => {
+  it('после аварийного возврата оставляет выбранный схлопнувшийся портал видимым', () => {
     const initial = createAppState(domainState({
       portals: [portal({ energy: 7, riskStatus: 'critical', wasCritical: true })],
       employees: [employee('field', { location: { worldId: 'world-1' } })],
@@ -193,11 +193,11 @@ describe('App', () => {
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     fireEvent.click(screen.getByRole('button', { name: 'Критичные' }));
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Вернуть сотрудников (1)' }));
     expect(screen.getByRole('button', { name: 'Все активные' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(screen.getByRole('region', { name: 'Список порталов' }))
-      .getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Схлопнулся');
+      .getByRole('button', { name: /Портал 1/ })).toHaveTextContent('Схлопнулся');
     expect(within(screen.getByRole('region', { name: 'Детали портала' }))
       .getByRole('button', { name: 'Закрыть схлопнувшийся портал' })).toBeEnabled();
   });
@@ -212,7 +212,7 @@ describe('App', () => {
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     fireEvent.click(screen.getByRole('button', { name: 'Критичные' }));
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     expect(within(detail).getByRole('button', { name: 'Отправить сотрудников' })).toBeDisabled();
     expect(within(detail).getByRole('button', { name: 'Вернуть сотрудников (0)' })).toBeDisabled();
@@ -231,7 +231,7 @@ describe('App', () => {
     }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     expect(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' })).toBeEnabled();
     fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
@@ -246,7 +246,7 @@ describe('App', () => {
     }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     const detail = screen.getByRole('region', { name: 'Детали портала' });
     expect(within(detail).getByText(/Энергии хватит на 1 из 2/)).toBeInTheDocument();
     fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
@@ -261,7 +261,7 @@ describe('App', () => {
     }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
-    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
     expect(screen.getByText('Риск').closest('div')).toHaveTextContent('40%');
     act(() => { vi.advanceTimersByTime(60000); });
     expect(screen.getByText('Риск').closest('div')).toHaveTextContent('0%');
@@ -292,32 +292,32 @@ describe('App', () => {
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     fireEvent.click(screen.getByRole('button', { name: 'Стабильные' }));
-    const row = screen.getByRole('button', { name: /Канал 1/ });
+    const row = screen.getByRole('button', { name: /Портал 1/ });
     fireEvent.click(row);
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
     expect(screen.getByRole('button', { name: 'Стабильные' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Стабильные' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(screen.getByRole('region', { name: 'Список порталов' })).queryByRole('button', { name: /Канал 1/ })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Список порталов' })).queryByRole('button', { name: /Портал 1/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Закрытые' }));
-    expect(within(screen.getByRole('region', { name: 'Список порталов' })).getByRole('button', { name: /Канал 1/ })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Список порталов' })).getByRole('button', { name: /Портал 1/ })).toBeInTheDocument();
   });
 
   it('разделяет активные и закрытые порталы и предупреждает об исследованном мире', () => {
     const initial = createAppState(domainState({
       worlds: [world({ researchStatus: 'explored', researchProgress: 100 })],
-      portals: [portal(), portal({ id: 'collapsed', name: 'Схлопнувшийся канал', lifecycle: 'collapsed', energy: 0, riskStatus: 'critical' }), portal({ id: 'closed', name: 'Старый канал', lifecycle: 'closed', closedReason: 'manual' })],
+      portals: [portal(), portal({ id: 'collapsed', name: 'Схлопнувшийся портал', lifecycle: 'collapsed', energy: 0, riskStatus: 'critical' }), portal({ id: 'closed', name: 'Старый портал', lifecycle: 'closed', closedReason: 'manual' })],
     }));
     expect(saveAppState(localStorage, initial)).toBeNull();
     renderGame();
     const list = screen.getByRole('region', { name: 'Список порталов' });
-    expect(within(list).getByRole('button', { name: /Канал 1/ })).toBeInTheDocument();
-    expect(within(list).getByRole('button', { name: /Схлопнувшийся канал/ })).toBeInTheDocument();
-    expect(within(list).queryByRole('button', { name: /Старый канал/ })).not.toBeInTheDocument();
-    fireEvent.click(within(list).getByRole('button', { name: /Канал 1/ }));
+    expect(within(list).getByRole('button', { name: /Портал 1/ })).toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: /Схлопнувшийся портал/ })).toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: /Старый портал/ })).not.toBeInTheDocument();
+    fireEvent.click(within(list).getByRole('button', { name: /Портал 1/ }));
     expect(screen.getByRole('alert')).toHaveTextContent('Мир уже исследован. Новая экспедиция не нужна.');
     fireEvent.click(screen.getByRole('button', { name: 'Закрытые' }));
-    expect(within(list).getByRole('button', { name: /Старый канал/ })).toBeInTheDocument();
-    expect(within(list).queryByRole('button', { name: /Канал 1/ })).not.toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: /Старый портал/ })).toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: /Портал 1/ })).not.toBeInTheDocument();
   });
 
   it('показывает итоговое окно и отдельные вкладки журнала и результатов', () => {

@@ -82,7 +82,7 @@ describe('случайный директор порталов', () => {
     expect(third.cycle.nextPortalInSeconds).toBe(30);
   });
 
-  it('по умолчанию соблюдает лимит незакрытых каналов', () => {
+  it('по умолчанию соблюдает лимит незакрытых порталов', () => {
     const state = domainState({
       portals: Array.from({ length: testConfig().maxUnclosedPortals }, (_, index) =>
         portal({ id: `portal-${index}`, lifecycle: index === 0 ? 'collapsed' : 'active' }),

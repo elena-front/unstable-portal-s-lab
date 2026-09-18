@@ -90,7 +90,7 @@ describe('экспедиции и исследование', () => {
     expect(result.value.employees[0]?.location).toBe('lab');
   });
 
-  it('после аварийного возврата сохраняет схлопнувшийся канал до ручного закрытия', () => {
+  it('после аварийного возврата сохраняет схлопнувшийся портал до ручного закрытия', () => {
     const route = portal({ energy: 7, riskStatus: 'critical', wasCritical: true });
     const state = domainState({ portals: [route],
       employees: [employee('field', { location: { worldId: 'world-1' } })],

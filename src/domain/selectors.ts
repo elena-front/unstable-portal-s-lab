@@ -58,8 +58,8 @@ export function closeConfirmationReason(state: DomainState, portal: Portal): str
   const world = state.worlds.find((item) => item.id === portal.destinationWorldId);
   const employees = employeesInWorld(state, portal.destinationWorldId).length;
   const lastRoute = activePortalsToWorld(state, portal.destinationWorldId).every((route) => route.id === portal.id);
-  if (employees > 0) return `В мире остались сотрудники (${employees}). Закрытие канала может оставить их без маршрута возвращения. Закрыть портал?`;
-  if (world?.researchStatus !== 'explored' && lastRoute) return 'Это последний работающий портал в неисследованный мир. Доступ к нему будет потерян до появления нового канала. Закрыть портал?';
+  if (employees > 0) return `В мире остались сотрудники (${employees}). Закрытие портала может оставить их без маршрута возвращения. Закрыть портал?`;
+  if (world?.researchStatus !== 'explored' && lastRoute) return 'Это последний работающий портал в неисследованный мир. Доступ к нему будет потерян до появления нового портала. Закрыть портал?';
   return null;
 }
 

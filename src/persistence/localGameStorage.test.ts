@@ -34,6 +34,15 @@ describe('версионированное локальное сохранени
     expect(loaded.storageWarning).toBeNull();
   });
 
+  it('показывает старое имя портала в единой терминологии после загрузки', () => {
+    const storage = memoryStorage();
+    const state = createAppState(domainState({ portals: [portal({ name: 'Канал 1' })] }));
+    expect(saveAppState(storage, state)).toBeNull();
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.portals[0]?.name).toBe('Портал 1');
+    expect(loaded.storageWarning).toBeNull();
+  });
+
   it('сохраняет открытую вкладку миров после перезагрузки', () => {
     const storage = memoryStorage();
     const state = createAppState(domainState());
@@ -56,7 +65,7 @@ describe('версионированное локальное сохранени
     }
   });
 
-  it('загружает старую партию с двадцатью незакрытыми каналами', () => {
+  it('загружает старую партию с двадцатью незакрытыми порталами', () => {
     const storage = memoryStorage();
     const portals = Array.from({ length: 20 }, (_, index) => portal({ id: `portal-${index}` }));
     saveAppState(storage, createAppState(domainState({ portals })));
@@ -65,7 +74,7 @@ describe('версионированное локальное сохранени
     expect(loaded.portals).toHaveLength(20);
   });
 
-  it('восстанавливает автоматически закрытые каналы старой незавершённой партии', () => {
+  it('восстанавливает автоматически закрытые порталы старой незавершённой партии', () => {
     const storage = memoryStorage();
     const old = createAppState(domainState({ portals: [
       portal({ id: 'positive', energy: 3, lifecycle: 'closed', closedReason: 'critical-empty',
@@ -96,7 +105,7 @@ describe('версионированное локальное сохранени
     expect(loadAppState(storage, dependencies, config).portals).toEqual(loaded.portals);
   });
 
-  it('не меняет автоматически закрытые каналы и итог завершённой партии', () => {
+  it('не меняет автоматически закрытые порталы и итог завершённой партии', () => {
     const storage = memoryStorage();
     const finished = finishGame(domainState({ portals: [portal({ energy: 3,
       lifecycle: 'closed', closedReason: 'critical-empty' })] }), dependencies);

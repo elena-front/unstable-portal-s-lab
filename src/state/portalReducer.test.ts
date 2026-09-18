@@ -35,7 +35,7 @@ describe('Portal reducer', () => {
       .toBeNull();
   });
 
-  it('сохраняет выбранный канал после схлопывания и открывает все незакрытые', () => {
+  it('сохраняет выбранный портал после схлопывания и открывает все незакрытые', () => {
     const initial = createAppState(domainState({
       portals: [portal({ energy: 7, riskStatus: 'critical', wasCritical: true })],
       employees: [employee('field', { location: { worldId: 'world-1' } })],
@@ -49,7 +49,7 @@ describe('Portal reducer', () => {
     expect(returned.selectedPortalId).toBe('portal-1');
   });
 
-  it('показывает невыбранный схлопнувшийся канал в новой партии под фильтром риска', () => {
+  it('показывает невыбранный схлопнувшийся портал в новой партии под фильтром риска', () => {
     const awaiting = reducer(createAppState(domainState()), { type: 'newGame' });
     const started = reducer(awaiting, { type: 'startGame', scenario: 'normal' });
     const opened = started.portals[0]!;

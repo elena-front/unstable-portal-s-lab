@@ -42,7 +42,7 @@ export function world(overrides: Partial<World> = {}): World {
 export function portal(overrides: Partial<Portal> = {}): Portal {
   return {
     id: 'portal-1',
-    name: 'Канал 1',
+    name: 'Портал 1',
     destinationWorldId: 'world-1',
     energy: 100,
     dissipationCoefficient: 1,

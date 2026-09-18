@@ -69,7 +69,7 @@ describe('проверочные сценарии и причины действ
     expect(actionAvailability(withoutReserve, critical, 1, gameBalance).close).toBeNull();
   });
 
-  it('разрешает закрыть стабильный канал в неисследованный мир с резервом', () => {
+  it('разрешает закрыть стабильный портал в неисследованный мир с резервом', () => {
     const main = portal();
     const reserve = portal({ id: 'reserve', stability: 1, dissipationCoefficient: 0,
       initialLifetimeSeconds: null });

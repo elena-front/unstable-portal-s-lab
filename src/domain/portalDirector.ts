@@ -54,7 +54,7 @@ function createPortal(
   const id = dependencies.createId('portal');
   const base: Portal = {
     id,
-    name: `${randomItem(dependencies.random, PORTAL_NAMES) ?? 'Канал'} · ${id}`,
+    name: `${randomItem(dependencies.random, PORTAL_NAMES) ?? 'Портал'} · ${id}`,
     destinationWorldId: world.id,
     energy: randomInteger(dependencies.random, config.portalEnergyRange),
     dissipationCoefficient: randomFloat(
