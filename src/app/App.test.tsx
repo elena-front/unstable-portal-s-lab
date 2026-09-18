@@ -18,6 +18,28 @@ function renderGame(start = true) {
 afterEach(() => { cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('App', () => {
+  it('показывает результат действия тостом и скрывает его по таймеру или кнопке', () => {
+    expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
+    renderGame();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Портал');
+    expect(screen.getByRole('status').parentElement?.className).toContain('toastRegion');
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('позволяет закрыть тост вручную', () => {
+    expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Канал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть портал' }));
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть уведомление' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('раскрывает дополнительные характеристики выбранного канала', () => {
     expect(saveAppState(localStorage, createAppState(domainState()))).toBeNull();
     renderGame();

@@ -1,5 +1,5 @@
 .page { width: min(1440px, 100%); margin: auto; padding: 24px clamp(16px, 3vw, 48px) 64px; }
-.sectionHeading, .portalRow, .world > div, .notice { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.sectionHeading, .portalRow, .world > div { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
 .header { padding-bottom: 18px; border-bottom: 1px solid var(--color-border); }
 .brand h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2.6rem); line-height: 1.05; letter-spacing: -.035em; white-space: nowrap; }
 .headerControls { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 20px; }
@@ -60,8 +60,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .actions select { padding: 6px 8px; }
 .actions .reason { margin: 0 0 6px; }
 @container (min-width: 540px) { .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.notice, .alert { margin: 12px 0; padding: 12px 16px; border-radius: 10px; background: #2e3040; }
-.notice button { padding: 2px 8px; }
+.toastRegion { position: fixed; top: 16px; right: 16px; z-index: 100; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.toast { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 12px 14px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-accent); border-radius: 10px; background: #2e3040; box-shadow: 0 12px 32px #0008; line-height: 1.4; overflow-wrap: anywhere; pointer-events: auto; }
+.toast[data-kind='error'] { border-left-color: #f09676; background: #503036; }
+.toast[data-kind='info'] { border-left-color: #89b8ee; }
+.toast button { flex: none; padding: 0 7px; line-height: 1.5; }
+.alert { margin: 12px 0; padding: 12px 16px; border-radius: 10px; }
 .alert { background: #503036; }
 .empty { padding: 20px; color: var(--color-text-muted); }
 .critical { margin: 16px 0; padding: 14px; border: 1px solid #f09676; border-radius: 12px; background: #47262c; }

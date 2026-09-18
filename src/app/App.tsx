@@ -77,6 +77,13 @@ export function App() {
   useEffect(() => { setGroupSize(1); }, [selected?.id]);
   useEffect(() => { setReturnCount(Number.POSITIVE_INFINITY); }, [selected?.id]);
   useEffect(() => {
+    if (!state.notification || state.awaitingStart) return;
+    const notification = state.notification;
+    const timeout = window.setTimeout(() => dispatch({ type: 'dismissNotification', notification }),
+      notification.kind === 'error' ? 8000 : 5000);
+    return () => window.clearTimeout(timeout);
+  }, [dispatch, state.notification, state.awaitingStart]);
+  useEffect(() => {
     if (previousSelectionRef.current && !state.selectedPortalId && document.activeElement === document.body) {
       currentFilterRef.current?.focus();
     }
@@ -124,7 +131,7 @@ export function App() {
         </nav><div className={styles.statusCard} aria-label="Состояние партии"><span>Партия {state.cycle.status === 'finished' ? 'завершена' : 'идёт'}</span><strong aria-label={`Осталось ${duration(state.cycle.durationSeconds - state.cycle.elapsedSeconds)}`}>{duration(state.cycle.durationSeconds - state.cycle.elapsedSeconds)}</strong><small>В лаборатории: {available.length} из {state.employees.length}</small></div></div>}
       </header>
       {!state.awaitingStart && state.storageWarning && <p role="alert" className={styles.alert}>{state.storageWarning} Для проверки можно загрузить демосценарий ниже.</p>}
-      {!state.awaitingStart && state.notification && <div role="status" className={styles.notice}><span>{state.notification.message}</span><button onClick={() => dispatch({ type: 'dismissNotification' })} aria-label="Закрыть уведомление">×</button></div>}
+      {!state.awaitingStart && state.notification && <div className={styles.toastRegion}><div role={state.notification.kind === 'error' ? 'alert' : 'status'} className={styles.toast} data-kind={state.notification.kind}><span>{state.notification.message}</span><button type="button" onClick={() => dispatch({ type: 'dismissNotification', notification: state.notification! })} aria-label="Закрыть уведомление">×</button></div></div>}
       {state.awaitingStart ? <GameSetup storageWarning={state.storageWarning} onStart={(scenario) => dispatch({ type: 'startGame', scenario })} /> :
         state.activeView === 'worklog' ? <Worklog /> :
         state.activeView === 'events' ? <EventJournal events={state.events} /> :

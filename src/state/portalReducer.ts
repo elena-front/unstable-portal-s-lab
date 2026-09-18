@@ -50,7 +50,7 @@ export type PortalAction =
   | { type: 'selectPortal'; portalId: string | null }
   | { type: 'setFilter'; filter: PortalFilter }
   | { type: 'setView'; view: ActiveView }
-  | { type: 'dismissNotification' }
+  | { type: 'dismissNotification'; notification: Notification }
   | { type: 'storageFailure'; message: string }
   | { type: 'sendResearchers'; portalId: string; employeeIds: string[] }
   | {
@@ -168,7 +168,7 @@ export function createPortalReducer(
       case 'setView':
         return { ...state, activeView: action.view };
       case 'dismissNotification':
-        return { ...state, notification: null };
+        return state.notification === action.notification ? { ...state, notification: null } : state;
       case 'storageFailure':
         return { ...state, storageWarning: action.message };
       case 'sendResearchers':

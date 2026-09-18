@@ -29,6 +29,10 @@ describe('Portal reducer', () => {
     expect(rejected.portalFilter).toBe('critical');
     expect(rejected.notification?.kind).toBe('error');
     expect(rejected.events.at(-1)?.outcome).toBe('rejected');
+    expect(reducer(rejected, { type: 'dismissNotification', notification: { kind: 'info', message: 'Старое' } }))
+      .toBe(rejected);
+    expect(reducer(rejected, { type: 'dismissNotification', notification: rejected.notification! }).notification)
+      .toBeNull();
   });
 
   it('сохраняет выбранный канал после схлопывания и открывает все незакрытые', () => {
