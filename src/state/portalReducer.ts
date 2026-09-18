@@ -21,7 +21,7 @@ import type {
 import type { ReviewScenario } from '../domain/demoScenario';
 
 export type PortalFilter = 'all' | 'stable' | 'dangerous' | 'critical' | 'collapsed' | 'closed';
-export type ActiveView = 'portals' | 'events' | 'results' | 'worklog';
+export type ActiveView = 'portals' | 'worlds' | 'events' | 'results' | 'worklog';
 
 export function portalMatchesFilter(portal: Portal, filter: PortalFilter): boolean {
   if (filter === 'all') return portal.lifecycle !== 'closed';

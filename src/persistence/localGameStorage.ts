@@ -249,7 +249,7 @@ function validCurrent(value: unknown, config: GameBalanceConfig): value is Saved
     validDomain(value.domain, config) &&
     (value.selectedPortalId === null || string(value.selectedPortalId)) &&
     member(value.portalFilter, ['all', 'stable', 'dangerous', 'critical', 'collapsed', 'closed']) &&
-    member(value.activeView, ['portals', 'events', 'results', 'worklog']) &&
+    member(value.activeView, ['portals', 'worlds', 'events', 'results', 'worklog']) &&
     (value.awaitingStart === undefined || typeof value.awaitingStart === 'boolean')
   );
 }

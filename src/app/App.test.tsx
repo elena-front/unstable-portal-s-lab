@@ -44,13 +44,26 @@ describe('App', () => {
     expect(screen.getByLabelText('Режим запуска')).toHaveValue('normal');
   });
 
-  it('показывает девять миров без верхней сводки порталов и сохраняет навигацию', () => {
+  it('переключает миры и порталы и держит статус рядом с навигацией', () => {
     renderGame();
     expect(screen.getByRole('heading', { name: 'Лаборатория нестабильных порталов' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Сводка порталов' })).not.toBeInTheDocument();
+    const navigation = screen.getByRole('navigation', { name: 'Основная навигация' });
+    const status = screen.getByLabelText('Состояние партии');
+    expect(status.parentElement).toContainElement(navigation);
+    expect(status).toHaveTextContent('Партия идёт');
+    expect(status).toHaveTextContent('10:00');
+    expect(status).toHaveTextContent('В лаборатории: 12 из 12');
+    expect(screen.queryByRole('heading', { name: 'Исследуйте миры и верните команду' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Миры' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Миры' }));
     expect(screen.getByRole('heading', { name: 'Миры' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Состояние партии')).toHaveTextContent('10:00');
     expect(screen.getByText('0 / 9 исследовано')).toBeInTheDocument();
     expect(screen.getAllByRole('progressbar')).toHaveLength(9);
+    expect(screen.queryByRole('region', { name: 'Список порталов' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Порталы' }));
+    expect(screen.getByRole('region', { name: 'Список порталов' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'AI Worklog' }));
     expect(screen.getByRole('heading', { name: 'AI Worklog' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Этапы работы и ключевые запросы' })).toBeInTheDocument();
@@ -59,6 +72,17 @@ describe('App', () => {
     expect(screen.getByText(/AI ошибочно сделал критичный статус безусловным запретом возврата/)).toBeInTheDocument();
     expect(screen.getByText(/прошли автоматические тесты/)).toBeInTheDocument();
     expect(screen.getByText(/статистика токенов недоступна/)).toBeInTheDocument();
+  });
+
+  it('показывает прогресс мира и сотрудников в строке портала', () => {
+    const initial = createAppState(domainState({
+      worlds: [world({ name: 'Таласса', researchProgress: 10 })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+    }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    expect(within(screen.getByRole('region', { name: 'Список порталов' }))
+      .getByRole('button', { name: /Канал 1/ })).toHaveTextContent('Таласса (исследован на 10%, 1 сотр.)');
   });
 
   it('отправляет группу и возвращает её через выбранный портал', () => {

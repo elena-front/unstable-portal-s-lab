@@ -34,6 +34,14 @@ describe('версионированное локальное сохранени
     expect(loaded.storageWarning).toBeNull();
   });
 
+  it('сохраняет открытую вкладку миров после перезагрузки', () => {
+    const storage = memoryStorage();
+    const state = createAppState(domainState());
+    state.activeView = 'worlds';
+    expect(saveAppState(storage, state)).toBeNull();
+    expect(loadAppState(storage, dependencies, config).activeView).toBe('worlds');
+  });
+
   it('продолжает сохранённые партии с шестью и восемью мирами, но создаёт девять в новой', () => {
     for (const count of [6, 8]) {
       const storage = memoryStorage();
