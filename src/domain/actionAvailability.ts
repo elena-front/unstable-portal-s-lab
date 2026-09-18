@@ -26,7 +26,7 @@ export function actionAvailability(
   const notActive = portal.lifecycle !== 'active' ? 'Портал не работает.' : null;
   const after = energyAfterTransit(portal, groupSize, config);
   const reserve = world && groupSize > 0 && after === 0
-    ? findReliableReserve(state, portal, groupSize, estimatedResearchSeconds(world, inWorld + groupSize), config)
+    ? findReliableReserve(state, portal, inWorld + groupSize, estimatedResearchSeconds(world, inWorld + groupSize), config)
     : null;
   const observerAssigned = state.employees.some((employee) => employee.role.type === 'observer');
 

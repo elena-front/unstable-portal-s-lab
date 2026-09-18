@@ -168,6 +168,36 @@ describe('версионированное локальное сохранени
     expect(loadAppState(storage, dependencies, config).storageWarning).not.toBeNull();
   });
 
+  it('не открывает сохранённую вкладку с повреждённой датой события', () => {
+    const storage = memoryStorage();
+    const state = createAppState(domainState());
+    state.activeView = 'events';
+    expect(saveAppState(storage, state)).toBeNull();
+    const saved = JSON.parse(storage.getItem(GAME_STORAGE_KEY)!);
+    saved.domain.events = [{ id: 'bad-event', occurredAt: 'не дата', kind: 'portal',
+      outcome: 'info', message: 'Событие' }];
+    storage.setItem(GAME_STORAGE_KEY, JSON.stringify(saved));
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.storageWarning).not.toBeNull();
+    expect(loaded.awaitingStart).toBe(true);
+    expect(loaded.activeView).toBe('portals');
+  });
+
+  it('отбрасывает повреждённую дату результата, сохраняя текущую партию', () => {
+    const storage = memoryStorage();
+    expect(saveAppState(storage, createAppState(domainState()))).toBeNull();
+    const history = JSON.parse(storage.getItem(HISTORY_STORAGE_KEY)!);
+    history.results = [{ id: 'old', startedAt: '2026-09-16T08:00:00.000Z',
+      finishedAt: 'не дата', exploredWorlds: 0, totalWorlds: 9,
+      returnedEmployees: 12, lostEmployees: 0, closedPortals: 0,
+      collapsedPortals: 0, stabilizationAttemptsUsed: 0 }];
+    storage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    const loaded = loadAppState(storage, dependencies, config);
+    expect(loaded.cycle.id).toBe('game-1');
+    expect(loaded.resultHistory).toHaveLength(0);
+    expect(loaded.storageWarning).not.toBeNull();
+  });
+
   it('считает JSON null повреждённым сохранением, а не отсутствием данных', () => {
     const storage = memoryStorage();
     storage.entries.set(GAME_STORAGE_KEY, 'null');

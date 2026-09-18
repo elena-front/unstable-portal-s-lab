@@ -28,7 +28,10 @@ const scenarios: { value: ReviewScenario; label: string }[] = [
 ];
 
 function date(value: string): string {
-  return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime())
+    ? new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(parsed)
+    : 'Дата неизвестна';
 }
 
 export function GameSetup({ onStart, storageWarning }: {

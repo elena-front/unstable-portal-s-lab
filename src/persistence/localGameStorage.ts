@@ -42,6 +42,10 @@ function nonEmptyString(value: unknown): value is string {
   return string(value) && value.length > 0;
 }
 
+function validTimestamp(value: unknown): value is string {
+  return string(value) && Number.isFinite(Date.parse(value));
+}
+
 function nonnegative(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
@@ -62,8 +66,8 @@ function validGameResult(value: unknown): value is GameResult {
   if (!record(value)) return false;
   return (
     nonEmptyString(value.id) &&
-    string(value.startedAt) &&
-    string(value.finishedAt) &&
+    validTimestamp(value.startedAt) &&
+    validTimestamp(value.finishedAt) &&
     nonnegative(value.exploredWorlds) &&
     nonnegative(value.totalWorlds) &&
     value.exploredWorlds <= value.totalWorlds &&
@@ -84,7 +88,7 @@ function validCycle(value: unknown): value is GameCycle {
   return (
     nonEmptyString(value.id) &&
     member(value.status, ['ready', 'running', 'finished']) &&
-    string(value.startedAt) &&
+    validTimestamp(value.startedAt) &&
     nonnegative(value.durationSeconds) &&
     value.durationSeconds > 0 &&
     nonnegative(value.elapsedSeconds) &&
@@ -158,7 +162,7 @@ function validEvent(value: unknown): value is GameEvent {
   if (!record(value)) return false;
   return (
     nonEmptyString(value.id) &&
-    string(value.occurredAt) &&
+    validTimestamp(value.occurredAt) &&
     member(value.kind, [
       'cycle',
       'portal',

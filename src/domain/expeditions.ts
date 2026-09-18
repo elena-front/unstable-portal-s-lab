@@ -63,13 +63,13 @@ export function findBetterReturnPortal(
   config: GameBalanceConfig,
 ): Portal | null {
   const currentCapacity = maxReturnCount(selectedPortal, config);
+  const safety = { stable: 2, dangerous: 1, critical: 0 };
   return activePortalsToWorld(state, selectedPortal.destinationWorldId)
     .filter((portal) => portal.id !== selectedPortal.id &&
-      portal.riskStatus !== 'critical' &&
       maxReturnCount(portal, config) > currentCapacity)
     .sort((a, b) =>
       Number(maxReturnCount(b, config) >= employeeCount) - Number(maxReturnCount(a, config) >= employeeCount) ||
-      Number(b.riskStatus === 'stable') - Number(a.riskStatus === 'stable') ||
+      safety[b.riskStatus] - safety[a.riskStatus] ||
       maxReturnCount(b, config) - maxReturnCount(a, config))
     .at(0) ?? null;
 }
@@ -148,7 +148,7 @@ export function sendResearchers(
     if (!world) return rejected(state, dependencies, 'Мир назначения не найден.');
     const futureCount = employeesInWorld(state, world.id).length + selected.length;
     const researchSeconds = estimatedResearchSeconds(world, futureCount);
-    if (!findReliableReserve(state, portal, selected.length, researchSeconds, config)) {
+    if (!findReliableReserve(state, portal, futureCount, researchSeconds, config)) {
       return rejected(
         state,
         dependencies,

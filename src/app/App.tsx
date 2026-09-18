@@ -66,7 +66,7 @@ export function App() {
   const selectedCount = Math.min(groupSize, available.length);
   const afterTransit = selected ? energyAfterTransit(selected, selectedCount, gameBalance) : 0;
   const reserve = selected && world && selectedCount > 0 && afterTransit === 0
-    ? findReliableReserve(state, selected, selectedCount, estimatedResearchSeconds(world, inWorld.length + selectedCount), gameBalance)
+    ? findReliableReserve(state, selected, inWorld.length + selectedCount, estimatedResearchSeconds(world, inWorld.length + selectedCount), gameBalance)
     : null;
   const availability = selected ? actionAvailability(state, selected, groupSize, gameBalance) : null;
   const returnCapacity = selected ? Math.min(inWorld.length, maxReturnCount(selected, gameBalance)) : 0;

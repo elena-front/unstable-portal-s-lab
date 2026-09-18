@@ -79,6 +79,22 @@ describe('экспедиции и исследование', () => {
     expect(result.value.employees[0]?.location).toEqual({ worldId: 'world-1' });
   });
 
+  it('учитывает всех сотрудников мира при проверке резерва исчерпывающей отправки', () => {
+    const selected = portal({ energy: 7 });
+    const reserve = portal({ id: 'reserve', energy: 4, dissipationCoefficient: 0,
+      stability: 1, initialLifetimeSeconds: null });
+    const state = domainState({
+      worlds: [world({ researchRequired: 1 })],
+      portals: [selected, reserve],
+      employees: [employee('field', { location: { worldId: 'world-1' } }), employee('free')],
+    });
+    const rejected = sendResearchers(state, selected.id, ['free'], dependencies, config);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.value.employees.find((person) => person.id === 'free')?.location).toBe('lab');
+    const enough = { ...state, portals: [selected, { ...reserve, energy: 5 }] };
+    expect(sendResearchers(enough, selected.id, ['free'], dependencies, config).ok).toBe(true);
+  });
+
   it('не отправляет сотрудника, если энергии не хватает оплатить переход даже с резервом', () => {
     const selected = portal({ energy: 3 });
     const reserve = portal({ id: 'reserve', energy: 100,
@@ -189,6 +205,18 @@ describe('экспедиции и исследование', () => {
     expect(partial.value.employees.find((person) => person.id === 'first')?.location).toBe('lab');
     expect(partial.value.employees.find((person) => person.id === 'second')?.location)
       .toEqual({ worldId: 'world-1' });
+  });
+
+  it('предлагает критичный портал для возврата, когда другого пригодного нет', () => {
+    const selected = portal({ energy: 3 });
+    const critical = portal({ id: 'critical', riskStatus: 'critical', energy: 30,
+      initialLifetimeSeconds: 2000 });
+    const state = domainState({ portals: [selected, critical], employees: [
+      employee('first', { location: { worldId: 'world-1' } }),
+      employee('second', { location: { worldId: 'world-1' } }),
+    ] });
+    expect(findBetterReturnPortal(state, selected, 2, config)?.id).toBe('critical');
+    expect(returnEmployees(state, critical.id, ['first', 'second'], dependencies, config).ok).toBe(true);
   });
 
   it('никогда не разрешает отправку в критичный портал', () => {

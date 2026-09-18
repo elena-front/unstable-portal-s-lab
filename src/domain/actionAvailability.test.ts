@@ -109,6 +109,17 @@ describe('проверочные сценарии и причины действ
     expect(actionAvailability(allowed, allowed.portals[0]!, 1, gameBalance).send).toBeNull();
   });
 
+  it('блокирует исчерпывающий переход, если резерв не вернёт всю команду', () => {
+    const selected = portal({ energy: 7 });
+    const reserve = portal({ id: 'reserve', energy: 4, dissipationCoefficient: 0,
+      stability: 1, initialLifetimeSeconds: null });
+    const state = domainState({ worlds: [world({ researchRequired: 1 })],
+      portals: [selected, reserve],
+      employees: [employee('field', { location: { worldId: 'world-1' } }), employee('free')],
+    });
+    expect(actionAvailability(state, selected, 1, gameBalance).send).toContain('надёжного маршрута');
+  });
+
   it('после закрытия схлопнувшегося портала освобождает слот ожидающему', () => {
     const full = createReviewScenario('limit');
     const delayed = tickGame(full, 1, testDependencies(), gameBalance);

@@ -7,6 +7,7 @@ import { PortalProvider } from '../state/PortalContext';
 import { createAppState } from '../state/portalReducer';
 import { domainState, employee, portal, testConfig, testDependencies, world } from '../test/domainFixtures';
 import { App } from './App';
+import { EventJournal } from './GameViews';
 
 function renderGame(start = true) {
   render(<PortalProvider dependencies={testDependencies()} storage={localStorage}><App /></PortalProvider>);
@@ -18,6 +19,13 @@ function renderGame(start = true) {
 afterEach(() => { cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('App', () => {
+  it('показывает журнал без сбоя при неожиданной некорректной дате', () => {
+    render(<EventJournal events={[{ id: 'bad', occurredAt: 'не дата', kind: 'portal',
+      outcome: 'info', message: 'Событие' }]} />);
+    expect(screen.getByText('Дата неизвестна')).toBeInTheDocument();
+    expect(screen.getByText('Событие')).toBeInTheDocument();
+  });
+
   it('показывает результат действия тостом и скрывает его по таймеру или кнопке', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     expect(saveAppState(localStorage, createAppState(domainState({ portals: [portal({ energy: 3 })] })))).toBeNull();
@@ -222,6 +230,19 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Все активные' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(within(detail).getByRole('button', { name: 'Вернуть сотрудников (1)' }));
     expect(screen.getByText('В лаборатории: 1 из 1')).toBeInTheDocument();
+  });
+
+  it('предлагает критичный портал, если только он может вернуть сотрудников', () => {
+    const initial = createAppState(domainState({
+      portals: [portal({ energy: 3 }), portal({ id: 'emergency', name: 'Аварийный портал',
+        riskStatus: 'critical', energy: 30, initialLifetimeSeconds: 2000, wasCritical: true })],
+      employees: [employee('field', { location: { worldId: 'world-1' } })],
+    }));
+    expect(saveAppState(localStorage, initial)).toBeNull();
+    renderGame();
+    fireEvent.click(screen.getByRole('button', { name: /Портал 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать маршрут: Аварийный портал' }));
+    expect(screen.getByRole('button', { name: 'Вернуть сотрудников (1)' })).toBeEnabled();
   });
 
   it('возвращает сотрудника через критичный портал при достаточной энергии', () => {
