@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPortalReducer, createAppState } from './portalReducer';
+import { createPortalReducer, createAppState, portalMatchesFilter } from './portalReducer';
+import { unclosedPortalCount } from '../domain/selectors';
 import {
   domainState,
   employee,
@@ -42,6 +43,27 @@ describe('Portal reducer', () => {
     expect(returned.portals[0]?.lifecycle).toBe('collapsed');
     expect(returned.portalFilter).toBe('all');
     expect(returned.selectedPortalId).toBe('portal-1');
+  });
+
+  it('показывает невыбранный схлопнувшийся канал в новой партии под фильтром риска', () => {
+    const awaiting = reducer(createAppState(domainState()), { type: 'newGame' });
+    const started = reducer(awaiting, { type: 'startGame', scenario: 'normal' });
+    const opened = started.portals[0]!;
+    const running = {
+      ...started,
+      cycle: { ...started.cycle, nextPortalInSeconds: 500 },
+      portals: [{ ...opened, energy: 0.05, dissipationCoefficient: 1,
+        stability: 0, initialLifetimeSeconds: 1000, riskStatus: 'stable' as const,
+        lifecycle: 'active' as const, closedReason: null }],
+      portalFilter: 'stable' as const,
+      selectedPortalId: null,
+    };
+    const next = reducer(running, { type: 'tick', deltaSeconds: 1 });
+    expect(next.portals[0]?.lifecycle).toBe('collapsed');
+    expect(next.portalFilter).toBe('all');
+    expect(next.portals.filter((item) => portalMatchesFilter(item, next.portalFilter)))
+      .toContainEqual(next.portals[0]);
+    expect(unclosedPortalCount(next.portals)).toBe(1);
   });
 
   it('после завершения добавляет результат ровно один раз и замораживает партию', () => {

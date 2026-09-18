@@ -87,14 +87,16 @@ function appendResultOnce(history: GameResult[], result: GameResult): GameResult
 }
 
 function selectionAfterPortalChange(state: AppState, portals: Portal[]): Pick<AppState, 'selectedPortalId' | 'portalFilter'> {
+  const previous = new Map(state.portals.map((portal) => [portal.id, portal.lifecycle]));
+  const newCollapse = portals.some((portal) =>
+    portal.lifecycle === 'collapsed' && previous.get(portal.id) === 'active');
+  const riskFilter = state.portalFilter === 'stable' ||
+    state.portalFilter === 'dangerous' || state.portalFilter === 'critical';
+  const portalFilter = newCollapse && riskFilter ? 'all' : state.portalFilter;
   const selected = portals.find((portal) => portal.id === state.selectedPortalId);
-  if (selected?.lifecycle === 'collapsed' && state.portalFilter !== 'all' &&
-      !portalMatchesFilter(selected, state.portalFilter)) {
-    return { selectedPortalId: selected.id, portalFilter: 'all' };
-  }
   return {
-    selectedPortalId: selected && portalMatchesFilter(selected, state.portalFilter) ? selected.id : null,
-    portalFilter: state.portalFilter,
+    selectedPortalId: selected && portalMatchesFilter(selected, portalFilter) ? selected.id : null,
+    portalFilter,
   };
 }
 
